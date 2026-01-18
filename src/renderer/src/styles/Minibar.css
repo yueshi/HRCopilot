@@ -1,0 +1,326 @@
+/**
+ * 折叠窗口样式 - 支持透明背景
+ */
+
+/* 确保 HTML 和 body 是透明的 */
+html, body {
+  background: transparent !important;
+}
+
+/* Minibar 容器 - 使用半透明渐变背景 */
+.minibar-container {
+  width: 60px;
+  min-height: 100vh;
+  /* 半透明渐变背景，可以看到桌面透过窗口 */
+  background: linear-gradient(180deg,
+    rgba(74, 144, 226, 0.85) 0%,
+    rgba(53, 122, 189, 0.9) 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 5px;
+  gap: 10px;
+  overflow: hidden;
+  box-sizing: border-box;
+  user-select: none;
+  /* 添加柔和的阴影和圆角 */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  margin: 5px;
+  /* 防止内容溢出到圆角外 */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* HR 头像 */
+.hr-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+
+.hr-avatar:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+}
+
+.hr-avatar:active {
+  transform: scale(0.95);
+}
+
+.hr-avatar-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.hr-avatar-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.hr-avatar-label {
+  font-size: 12px;
+  font-weight: bold;
+  margin-top: 2px;
+  letter-spacing: 1px;
+}
+
+/* 菜单按钮容器 */
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* 恢复按钮 - 位于右下角 */
+.restore-button {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(255, 107.107, 0.4);
+  transition: all 0.3s ease;
+  z-index: 100;
+  animation: restoreBounceIn 0.4s ease;
+}
+
+.restore-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(255, 107.107, 0.5);
+}
+
+.restore-button:active {
+  transform: scale(0.95);
+}
+
+.restore-icon {
+  color: white;
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* HR 头像 - 当有恢复可用时 */
+.hr-avatar.has-restore {
+  border: 2px solid #ff6b6b;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* 恢复指示器小圆点 */
+.restore-indicator {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff6b6b;
+  animation: indicatorPulse 1.5s ease-in-out infinite;
+}
+
+/* 隐藏滚动条 */
+.menu-buttons::-webkit-scrollbar {
+  width: 0;
+  display: none;
+}
+
+/* 菜单按钮 */
+.menu-button {
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.menu-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--button-color, #1890ff);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 0;
+}
+
+.menu-button:hover::before {
+  opacity: 0.3;
+}
+
+.menu-button:active {
+  transform: scale(0.95);
+}
+
+.menu-button-hover {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.menu-button-icon {
+  font-size: 20px;
+  line-height: 1;
+  z-index: 1;
+}
+
+.menu-button-label {
+  font-size: 10px;
+  color: white;
+  margin-top: 2px;
+  z-index: 1;
+}
+
+/* 工具提示 */
+.menu-button::after {
+  content: attr(title);
+  position: absolute;
+  left: -100px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+}
+
+.menu-button:hover::after {
+  opacity: 1;
+  left: -90px;
+}
+
+/* 动画效果 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes indicatorPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes restoreBounceIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) translateY(20px);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.menu-buttons {
+  animation: fadeIn 0.3s ease;
+}
+
+.menu-button {
+  animation: slideIn 0.3s ease forwards;
+}
+
+/* 响应式调整 */
+@media (max-height: 600px) {
+  .minibar-container {
+    padding: 5px 3px;
+    gap: 5px;
+  }
+
+  .hr-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .menu-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .menu-button-icon {
+    font-size: 18px;
+  }
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .minibar-container {
+    background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
+  }
+
+  .menu-button::after {
+    background: rgba(255, 255, 255, 0.9);
+    color: #1a252f;
+  }
+}
