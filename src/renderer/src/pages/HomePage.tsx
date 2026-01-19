@@ -17,9 +17,9 @@ const HomePage: React.FC = () => {
     <div className="home-page">
       {/* 欢迎区域 */}
       <Card style={{ marginBottom: 24, textAlign: 'center' }}>
-        <Title level={2}>欢迎使用 ResumerHelper 🚀</Title>
+        <Title level={2}>欢迎使用 HRCopilot 🚀</Title>
         <Paragraph style={{ fontSize: 16, color: '#666', marginBottom: 24 }}>
-          基于 AI 的智能简历优化平台，让您的简历在众多求职者中脱颖而出
+          您的智能 HR 智能助手，提供简历优化、匹配分析和面试问题生成
         </Paragraph>
         <Space size="large">
           <Button

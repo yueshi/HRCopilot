@@ -8,7 +8,7 @@ import { registerAllHandlers } from "./handlers";
 import { windowManager } from "./windowManager";
 import { appLifecycle } from "./appLifecycle";
 
-class ResumerHelperApp {
+class HRCopilotApp {
   private database = database;
 
   async initialize() {
@@ -60,7 +60,7 @@ class ResumerHelperApp {
         },
       });
 
-      logger.info("ResumerHelper 桌面应用启动完成");
+      logger.info("HRCopilot 桌面应用启动完成");
     } catch (error) {
       logger.error("应用初始化失败:", error);
       this.showErrorDialog("应用初始化失败", error as Error);
@@ -346,8 +346,8 @@ class ResumerHelperApp {
             click: () => {
               dialog.showMessageBox(windowManager.getMainWindow()!, {
                 type: "info",
-                title: "关于 ResumerHelper",
-                message: "ResumerHelper v" + app.getVersion(),
+                title: "关于 HRCopilot",
+                message: "HRCopilot v" + app.getVersion(),
                 detail:
                   "智能JD简历匹配分析工具\n\n基于AI技术，帮助您快速分析简历与职位描述的匹配度。",
               });
@@ -367,7 +367,7 @@ class ResumerHelperApp {
 }
 
 // 创建应用实例
-const appInstance = new ResumerHelperApp();
+const appInstance = new HRCopilotApp();
 
 // 应用事件处理
 app.whenReady().then(() => {
@@ -384,4 +384,4 @@ app.on("activate", () => {
   }
 });
 
-console.log("ResumerHelper 主进程启动中...");
+console.log("HRCopilot 主进程启动中...");

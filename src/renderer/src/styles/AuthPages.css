@@ -1,0 +1,214 @@
+/**
+ * 登录/注册页面样式 - 玻璃态设计
+ */
+
+/* 页面容器 - 透明背景 */
+.auth-container-transparent {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  padding: 20px;
+}
+
+/* 玻璃态卡片 */
+.auth-card-glass {
+  width: 100%;
+  max-width: 420px;
+  /* 玻璃态渐变背景 */
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(245, 247, 250, 0.92) 100%);
+  /* 毛玻璃效果 */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  /* 精细边框 */
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 20px;
+  /* 柔和阴影 */
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 8px 24px rgba(0, 0, 0, 0.1);
+  padding: 40px 32px;
+  animation: cardFadeIn 0.5s ease;
+}
+
+/* 卡片进入动画 */
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 头部区域 */
+.auth-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 1px;
+}
+
+.auth-subtitle {
+  font-size: 16px;
+  color: #6b7280;
+  margin-top: 8px;
+  font-weight: 400;
+}
+
+/* 表单样式 */
+.auth-form .ant-form-item {
+  margin-bottom: 20px;
+}
+
+.auth-form .ant-input-affix-wrapper,
+.auth-form .ant-input {
+  border-radius: 10px;
+  border: 1.5px solid #e5e7eb;
+  background: rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+  box-shadow: none;
+}
+
+.auth-form .ant-input-affix-wrapper:focus,
+.auth-form .ant-input:focus,
+.auth-form .ant-input-affix-wrapper-focused,
+.auth-form .ant-input-focused {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.auth-form .ant-input-affix-wrapper:hover,
+.auth-form .ant-input:hover {
+  border-color: #d1d5db;
+}
+
+/* 输入框图标 */
+.auth-form .ant-input-prefix {
+  color: #9ca3af;
+}
+
+/* 主按钮 */
+.auth-primary-button {
+  height: 48px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: all 0.3s ease;
+}
+
+.auth-primary-button:hover {
+  background: linear-gradient(135deg, #5a67d8 0%, #694a91 100%);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+}
+
+.auth-primary-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* 链接文字 */
+.auth-link-text {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 15px;
+  color: #6b7280;
+}
+
+.auth-link {
+  color: #667eea;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.auth-link:hover {
+  color: #5a67d8;
+  text-decoration: underline;
+}
+
+/* 警告框 */
+.auth-alert {
+  border-radius: 10px;
+  margin-bottom: 16px;
+  background: rgba(254, 226, 226, 0.9);
+  border-color: #fecaca;
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .auth-card-glass {
+    background: linear-gradient(135deg,
+      rgba(31, 41, 55, 0.95) 0%,
+      rgba(17, 24, 39, 0.92) 100%);
+    border-color: rgba(75, 85, 99, 0.5);
+  }
+
+  .auth-subtitle {
+    color: #9ca3af;
+  }
+
+  .auth-form .ant-input-affix-wrapper,
+  .auth-form .ant-input {
+    background: rgba(55, 65, 81, 0.8);
+    border-color: #4b5563;
+    color: #e5e7eb;
+  }
+
+  .auth-form .ant-input-affix-wrapper:hover,
+  .auth-form .ant-input:hover {
+    border-color: #6b7280;
+  }
+
+  .auth-form .ant-input-prefix {
+    color: #9ca3af;
+  }
+
+  .auth-link-text {
+    color: #9ca3af;
+  }
+
+  .auth-link {
+    color: #818cf8;
+  }
+
+  .auth-link:hover {
+    color: #a5b4fc;
+  }
+}
+
+/* 响应式调整 */
+@media (max-width: 480px) {
+  .auth-card-glass {
+    padding: 32px 24px;
+    border-radius: 16px;
+  }
+
+  .auth-title {
+    font-size: 28px;
+  }
+
+  .auth-primary-button {
+    height: 44px;
+    font-size: 15px;
+  }
+}

@@ -7,14 +7,12 @@ html, body {
   background: transparent !important;
 }
 
-/* Minibar 容器 - 使用半透明渐变背景 */
+/* Minibar 容器 - 透明背景 */
 .minibar-container {
   width: 60px;
   min-height: 100vh;
-  /* 半透明渐变背景，可以看到桌面透过窗口 */
-  background: linear-gradient(180deg,
-    rgba(74, 144, 226, 0.85) 0%,
-    rgba(53, 122, 189, 0.9) 100%);
+  /* 完全透明背景，可以看到桌面透过窗口 */
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -23,13 +21,6 @@ html, body {
   overflow: hidden;
   box-sizing: border-box;
   user-select: none;
-  /* 添加柔和的阴影和圆角 */
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-  border-radius: 12px;
-  margin: 5px;
-  /* 防止内容溢出到圆角外 */
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 /* HR 头像 */
@@ -73,6 +64,8 @@ html, body {
   font-weight: bold;
   margin-top: 2px;
   letter-spacing: 1px;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 /* 菜单按钮容器 */
@@ -156,10 +149,11 @@ html, body {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.6);
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .menu-button::before {
@@ -183,9 +177,14 @@ html, body {
   transform: scale(0.95);
 }
 
+.menu-button:hover {
+  background: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
 .menu-button-hover {
-  background: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.7);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .menu-button-icon {
@@ -196,9 +195,11 @@ html, body {
 
 .menu-button-label {
   font-size: 10px;
-  color: white;
+  color: #ffffff;
   margin-top: 2px;
   z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  font-weight: 500;
 }
 
 /* 工具提示 */
@@ -313,12 +314,8 @@ html, body {
   }
 }
 
-/* 暗色模式适配 */
+/* 暗色模式适配 - 保持透明 */
 @media (prefers-color-scheme: dark) {
-  .minibar-container {
-    background: linear-gradient(180deg, #2c3e50 0%, #1a252f 100%);
-  }
-
   .menu-button::after {
     background: rgba(255, 255, 255, 0.9);
     color: #1a252f;

@@ -96,7 +96,7 @@ const Layout: React.FC = () => {
         }}
       >
         <Title level={3} style={{ margin: 0, color: "#1890ff" }}>
-          ResumerHelper
+          HRCopilot
         </Title>
         <Space>
           <Button type="text" icon={<UserOutlined />} onClick={handleLogout}>

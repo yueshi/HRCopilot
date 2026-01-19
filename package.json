@@ -1,14 +1,14 @@
 {
-  "name": "resumer-helper-desktop",
+  "name": "hr-copilot-desktop",
   "version": "1.0.0",
-  "description": "ResumerHelper - JD简历匹配分析桌面工具",
+  "description": "HRCopilot - 智能 HR 助手桌面工具",
   "main": "dist/main/main.js",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   },
   "homepage": "./",
-  "author": "ResumerHelper Team",
+  "author": "HRCopilot Team",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -89,8 +89,8 @@
     "zustand": "^5.0.1"
   },
   "build": {
-    "appId": "com.resumerhelper.desktop",
-    "productName": "ResumerHelper",
+    "appId": "com.hrcopilot.desktop",
+    "productName": "HRCopilot",
     "directories": {
       "output": "release"
     },
