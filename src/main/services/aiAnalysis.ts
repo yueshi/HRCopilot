@@ -98,7 +98,8 @@ export class AIAnalysisService {
   private defaultApiKey: string;
 
   constructor() {
-    this.defaultApiUrl = process.env.GLM_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    // base_url 应该是基础地址，不包含 /chat/completions 端点
+    this.defaultApiUrl = process.env.GLM_API_URL || 'https://open.bigmodel.cn/api/paas/v4';
     this.defaultApiKey = process.env.GLM_API_KEY || '';
   }
 
@@ -348,7 +349,12 @@ ${resume.job_description || '无'}
     }
 
     try {
-      const response = await fetch(config.apiUrl, {
+      // 构建完整的 API URL，添加 /chat/completions 端点
+      const fullApiUrl = config.apiUrl.endsWith('/chat/completions')
+        ? config.apiUrl
+        : `${config.apiUrl}/chat/completions`;
+
+      const response = await fetch(fullApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -402,7 +408,12 @@ ${resume.job_description || '无'}
     }
 
     try {
-      const response = await fetch(config.apiUrl, {
+      // 构建完整的 API URL，添加 /chat/completions 端点
+      const fullApiUrl = config.apiUrl.endsWith('/chat/completions')
+        ? config.apiUrl
+        : `${config.apiUrl}/chat/completions`;
+
+      const response = await fetch(fullApiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

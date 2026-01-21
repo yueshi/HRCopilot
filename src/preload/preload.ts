@@ -74,6 +74,7 @@ const electronAPI: Record<string, any> = {
     providerTest: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.SETTING.PROVIDER_TEST, request),
     providerSetDefault: (providerId: string) => ipcRenderer.invoke(IPC_CHANNELS.SETTING.PROVIDER_SET_DEFAULT, providerId),
     providerGetDefault: () => ipcRenderer.invoke(IPC_CHANNELS.SETTING.PROVIDER_GET_DEFAULT),
+    providerChat: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.SETTING.PROVIDER_CHAT, request),
 
     // 任务配置相关
     taskConfigGet: (taskName: string) => ipcRenderer.invoke(IPC_CHANNELS.SETTING.TASK_CONFIG_GET, taskName),

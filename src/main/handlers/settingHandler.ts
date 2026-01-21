@@ -59,6 +59,15 @@ export class SettingHandler extends BaseHandler {
       return await llmProviderController.getDefaultProvider();
     });
 
+    // LLM 供应商聊天
+    this.register(IPC_CHANNELS.SETTING.PROVIDER_CHAT, async (_event, request: {
+      providerId: string;
+      message: string;
+      model?: string;
+    }) => {
+      return await llmProviderController.chat(request);
+    });
+
     // ============ 任务配置相关 ============
 
     // 获取任务配置

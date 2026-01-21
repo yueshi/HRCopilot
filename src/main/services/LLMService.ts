@@ -36,7 +36,7 @@ export class LLMService {
    */
   private async getProvider(
     providerId: string,
-    needFullConfig = false,
+    needFullConfig = true,  // 默认需要完整配置（包含解密的 API Key）
   ): Promise<BaseLLMProvider> {
     // 检查缓存
     if (this.providerCache.has(providerId)) {
@@ -51,6 +51,8 @@ export class LLMService {
     if (!config) {
       throw new Error(`供应商不存在: ${providerId}`);
     }
+
+    logger.info(`LLMService.getProvider: providerId=${providerId}, hasApiKey=!!${config.api_key}, apiKey=${config.api_key ? config.api_key.substring(0, 10) + '...' : 'none'}`);
 
     const provider = this.createProvider(config);
     this.providerCache.set(providerId, provider);
@@ -227,6 +229,17 @@ export class LLMService {
         logger.info(`LLM 调用成功: ${config.providerId}/${config.model}`, {
           duration,
           usage: result.usage,
+        });
+
+        // 记录完整的响应数据用于调试
+        logger.info(`LLM 响应数据: ${config.providerId}/${config.model}`, {
+          response: {
+            content: result.content,
+            contentLength: result.content?.length || 0,
+            model: result.model,
+            provider_id: result.provider_id,
+            usage: result.usage,
+          },
         });
 
         return result;

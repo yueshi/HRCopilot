@@ -193,6 +193,43 @@ export class LLMProviderController {
   }
 
   /**
+   * 供应商聊天测试
+   */
+  async chat(request: {
+    providerId: string;
+    message: string;
+    model?: string;
+  }): Promise<{
+    success: boolean;
+    response?: string;
+    error?: string;
+  }> {
+    try {
+      const provider = await database.getLLMProviderFull(request.providerId);
+      if (!provider) {
+        logger.error("供应商聊天失败: 供应商不存在", request.providerId);
+        return { success: false, error: "供应商不存在" };
+      }
+
+      const result = await llmService.call({
+        provider_id: request.providerId,
+        model: request.model,
+        messages: [{ role: "user", content: request.message }],
+      });
+
+      logger.info("供应商聊天成功:", {
+        providerId: request.providerId,
+        contentLength: result.content?.length || 0,
+      });
+
+      return { success: true, response: result.content };
+    } catch (error) {
+      logger.error("供应商聊天失败:", error);
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /**
    * 获取任务配置
    */
   async getTaskConfig(taskName: string): Promise<LLMTaskConfig | null> {

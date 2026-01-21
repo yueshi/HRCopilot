@@ -17,9 +17,11 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ApiOutlined,
+  MessageOutlined,
 } from "@ant-design/icons";
 import { useSettingStore } from "../../store/settingStore";
 import ProviderForm from "./ProviderForm";
+import ProviderChatModal from "./ProviderChatModal";
 import type { LLMProvider, LLMProviderType } from "@/shared/types/llm";
 
 const PROVIDER_TYPE_COLORS: Record<LLMProviderType, string> = {
@@ -56,6 +58,7 @@ const ProviderList: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingProvider, setEditingProvider] = useState<LLMProvider | null>(null);
   const [testingIds, setTestingSet] = useState<Set<string>>(new Set());
+  const [chatProvider, setChatProvider] = useState<LLMProvider | null>(null);
 
   // 使用 once 模式确保 fetchProviders 只在组件挂载时调用一次
   useEffect(() => {
@@ -152,6 +155,13 @@ const ProviderList: React.FC = () => {
                 <Space>
                   <Button
                     size="small"
+                    icon={<MessageOutlined />}
+                    onClick={() => setChatProvider(provider)}
+                  >
+                    聊天
+                  </Button>
+                  <Button
+                    size="small"
                     icon={<ApiOutlined />}
                     loading={testingIds.has(provider.provider_id)}
                     onClick={() => handleTest(provider)}
@@ -245,6 +255,14 @@ const ProviderList: React.FC = () => {
           provider={editingProvider}
           open={showModal}
           onClose={handleCloseModal}
+        />
+      )}
+
+      {chatProvider && (
+        <ProviderChatModal
+          open={!!chatProvider}
+          provider={chatProvider}
+          onClose={() => setChatProvider(null)}
         />
       )}
     </div>

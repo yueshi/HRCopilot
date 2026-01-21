@@ -8,6 +8,23 @@ import { registerAllHandlers } from "./handlers";
 import { windowManager } from "./windowManager";
 import { appLifecycle } from "./appLifecycle";
 
+// 抑制 macOS 输入法框架 (IMK) 的系统警告
+// 这些警告不会影响应用功能
+if (process.platform === "darwin") {
+  const originalConsoleError = console.error;
+  console.error = (...args: any[]) => {
+    const message = args.join(" ");
+    // 过滤掉 macOS IMK 相关的系统警告
+    if (
+      message.includes("_TIPropertyValueIsValid called with") ||
+      message.includes("imkxpc_setApplicationProperty")
+    ) {
+      return;
+    }
+    originalConsoleError.apply(console, args);
+  };
+}
+
 class HRCopilotApp {
   private database = database;
 

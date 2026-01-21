@@ -52,20 +52,51 @@ export class OpenAIProvider extends BaseLLMProvider {
    */
   async fetchModels(): Promise<string[]> {
     try {
-      const response = await this.fetchWithTimeout(
-        `${this.baseUrl}/models`,
-        {
-          method: "GET",
-          headers: this.getHeaders(),
-        },
-      );
+      // 检测是否是 OpenAI 官方服务器
+      const isOpenAiOfficial = this.baseUrl.includes("api.openai.com");
 
-      if (!response.ok) {
-        await this.handleErrorResponse(response);
+      if (isOpenAiOfficial) {
+        const response = await this.fetchWithTimeout(
+          `${this.baseUrl}/models`,
+          {
+            method: "GET",
+            headers: this.getHeaders(),
+          },
+        );
+
+        if (!response.ok) {
+          await this.handleErrorResponse(response);
+        }
+
+        const data = await this.parseJSONResponse(response);
+        return (data.data || []).map((m: any) => m.id);
+      } else {
+        // 对于非官方 OpenAI 服务器（如 GLM、兼容 API），使用本地配置的模型列表
+        // 发送一个简单的测试请求来验证连接
+        const response = await this.fetchWithTimeout(
+          `${this.baseUrl}/chat/completions`,
+          {
+            method: "POST",
+            headers: this.getHeaders(),
+            body: JSON.stringify({
+              model: "test",
+              messages: [{ role: "user", content: "testConnection" }],
+              max_tokens: 1,
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          // 如果返回 401 或 404，可能是因为模型不存在
+          // 对于兼容 API，我们返回空列表，让用户在配置中指定模型
+          logger.info("非官方 OpenAI 服务器无法通过 /models 获取列表，返回配置的模型列表");
+          return [];
+        }
+
+        // 连接成功，返回配置的模型列表或空列表
+        logger.info("非官方 OpenAI 服务器连接测试成功");
+        return [];
       }
-
-      const data = await this.parseJSONResponse(response);
-      return (data.data || []).map((m: any) => m.id);
     } catch (error) {
       logger.error("获取模型列表失败:", error);
       throw error;
@@ -83,26 +114,42 @@ export class OpenAIProvider extends BaseLLMProvider {
     try {
       const body = this.buildRequestBody(messages, model, parameters);
 
-      logger.debug(`调用 OpenAI API: ${model}`, {
-        messagesCount: messages.length,
-        parameters,
+      const apiUrl = `${this.baseUrl}/chat/completions`;
+      const headers = this.getHeaders();
+
+      logger.info(`调用 OpenAI API: model=${model}`, {
+        url: apiUrl,
+        headers,
+        requestBody: body,
       });
 
       const response = await this.fetchWithTimeout(
-        `${this.baseUrl}/chat/completions`,
+        apiUrl,
         {
           method: "POST",
-          headers: this.getHeaders(),
+          headers: headers,
           body: JSON.stringify(body),
         },
       );
 
       if (!response.ok) {
+        logger.error(`API 请求失败: status=${response.status}, statusText=${response.statusText}`, {
+          url: apiUrl,
+          model,
+        });
         await this.handleErrorResponse(response);
       }
 
       const data = await this.parseJSONResponse(response);
-      return this.parseResponse(data);
+      const parsedResponse = this.parseResponse(data);
+
+      logger.info(`OpenAI API 响应成功: model=${model}`, {
+        url: apiUrl,
+        response: parsedResponse,
+        usage: parsedResponse.usage,
+      });
+
+      return parsedResponse;
     } catch (error) {
       logger.error("OpenAI API 调用失败:", error);
       throw error;
@@ -169,12 +216,21 @@ export class OpenAIProvider extends BaseLLMProvider {
    * 解析响应
    */
   protected parseResponse(response: any): LLMCallResponseResult {
+    logger.info(`OpenAI API 解析响应，原始响应数据:`, {
+      hasChoices: !!response.choices,
+      hasFirstChoice: !!response.choices?.[0],
+      hasMessage: !!response.choices?.[0]?.message,
+      hasContent: !!response.choices?.[0]?.message?.content,
+      hasUsage: !!response.usage,
+      choicesCount: response.choices?.length || 0,
+    });
+
     const choice = response.choices?.[0];
     if (!choice) {
       throw new Error("响应格式错误: 缺少 choices");
     }
 
-    return {
+    const result = {
       content: choice.message?.content || "",
       model: response.model || "",
       provider_id: this.providerId,
@@ -186,6 +242,15 @@ export class OpenAIProvider extends BaseLLMProvider {
           }
         : undefined,
     };
+
+    logger.info(`OpenAI API 解析响应结果:`, {
+      contentLength: result.content.length,
+      contentPreview: result.content.substring(0, 100) + (result.content.length > 100 ? '...' : ''),
+      model: result.model,
+      usage: result.usage,
+    });
+
+    return result;
   }
 
   /**

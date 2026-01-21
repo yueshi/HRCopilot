@@ -59,6 +59,7 @@ export const IPC_CHANNELS = {
     PROVIDER_TEST: "setting:provider:test",
     PROVIDER_SET_DEFAULT: "setting:provider:set-default",
     PROVIDER_GET_DEFAULT: "setting:provider:get-default",
+    PROVIDER_CHAT: "setting:provider:chat",
 
     // 任务配置相关
     TASK_CONFIG_GET: "setting:task-config:get",

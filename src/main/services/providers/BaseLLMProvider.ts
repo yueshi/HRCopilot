@@ -150,9 +150,24 @@ export abstract class BaseLLMProvider {
     let errorMessage = `请求失败 (${response.status})`;
 
     try {
-      const data = await this.parseJSONResponse(response);
-      if (data.error) {
-        errorMessage = data.error.message || data.error || errorMessage;
+      const text = await response.text();
+      logger.error(`API 错误响应详情:`, {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url,
+        responseText: text,
+      });
+
+      try {
+        const data = JSON.parse(text);
+        if (data.error) {
+          errorMessage = data.error.message || data.error || errorMessage;
+        }
+      } catch {
+        // JSON 解析失败，使用原始文本
+        if (text && text.length > 0 && text.length < 500) {
+          errorMessage = `${errorMessage}: ${text}`;
+        }
       }
     } catch {
       // 忽略解析错误

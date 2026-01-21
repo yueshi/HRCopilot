@@ -40,6 +40,15 @@ interface SettingActions {
   ) => Promise<LLMProviderTestResult>;
   setDefaultProvider: (providerId: string) => Promise<void>;
   syncModels: (providerId: string) => Promise<string[]>;
+  chat: (request: {
+    providerId: string;
+    message: string;
+    model?: string;
+  }) => Promise<{
+    success: boolean;
+    response?: string;
+    error?: string;
+  }>;
 
   // 任务配置相关
   fetchTaskConfigs: () => Promise<void>;
@@ -201,6 +210,10 @@ export const useSettingStore = create<SettingState & SettingActions>((set, get) 
       console.error('syncModels 错误:', error);
       throw error;
     }
+  },
+
+  chat: async (request) => {
+    return await settingApi.chat(request);
   },
 
   // ============ 任务配置相关 ============

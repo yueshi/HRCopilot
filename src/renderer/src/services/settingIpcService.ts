@@ -93,6 +93,21 @@ export const settingApi = {
     );
   },
 
+  /**
+   * 使用指定供应商进行简单聊天
+   */
+  chat: async (request: {
+    providerId: string;
+    message: string;
+    model?: string;
+  }): Promise<{
+    success: boolean;
+    response?: string;
+    error?: string;
+  }> => {
+    return invokeIPC(IPC_CHANNELS.SETTING.PROVIDER_CHAT, request);
+  },
+
   // ============ 任务配置相关 ============
 
   /**
