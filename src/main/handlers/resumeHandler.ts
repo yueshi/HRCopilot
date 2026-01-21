@@ -23,6 +23,7 @@ import type {
 } from '../../shared/types';
 import { database } from '../database/sqlite';
 import { FileParserService } from '../services/fileParser';
+import { ResumeParserService } from '../services/resumeParserService';
 import { HashService } from '../services/hashService';
 import { DeduplicationService } from '../services/deduplicationService';
 import { VersionService } from '../services/versionService';
@@ -103,11 +104,24 @@ export class ResumeHandler extends BaseHandler {
         const parseResult = await FileParserService.parseFile(tempFilePath, request.mimeType);
         parsedContent = FileParserService.cleanText(parseResult.text);
 
-        // 提取个人信息
+        // 使用完整的简历解析服务提取结构化信息
         try {
-          parsedInfo = this.extractPersonalInfo(parsedContent);
+          parsedInfo = ResumeParserService.parseResumeContent(parsedContent);
+          logger.info('简历结构化解析完成', {
+            name: parsedInfo.name,
+            email: parsedInfo.email,
+            skillsCount: parsedInfo.skills?.length || 0,
+            educationCount: parsedInfo.education?.length || 0,
+            experienceCount: parsedInfo.experience?.length || 0,
+          });
         } catch (error) {
-          logger.warn('提取个人信息失败:', error);
+          logger.warn('简历结构化解析失败，尝试基础信息提取:', error);
+          // 降级方案：使用简单正则提取
+          try {
+            parsedInfo = this.extractPersonalInfo(parsedContent);
+          } catch (fallbackError) {
+            logger.warn('基础信息提取也失败:', fallbackError);
+          }
         }
 
         logger.info(`文件解析成功，内容长度: ${parsedContent.length} 字符`);
@@ -663,12 +677,10 @@ export class ResumeHandler extends BaseHandler {
   }
 
   private convertToResumeData(resume: any): ResumeData {
-    console.log('Database resume:', resume);
-    console.log('Resume id type:', typeof resume.id);
     let evaluation = undefined;
     if (resume.evaluation) {
       try {
-        evaluation = JSON.parse(resume.evaluation);
+        evaluation = typeof resume.evaluation === 'string' ? JSON.parse(resume.evaluation) : resume.evaluation;
       } catch {
         evaluation = resume.evaluation;
       }
@@ -677,9 +689,18 @@ export class ResumeHandler extends BaseHandler {
     let interviewQuestions = undefined;
     if (resume.interview_questions) {
       try {
-        interviewQuestions = JSON.parse(resume.interview_questions);
+        interviewQuestions = typeof resume.interview_questions === 'string' ? JSON.parse(resume.interview_questions) : resume.interview_questions;
       } catch {
         interviewQuestions = resume.interview_questions;
+      }
+    }
+
+    let parsedInfo = undefined;
+    if (resume.parsed_info) {
+      try {
+        parsedInfo = typeof resume.parsed_info === 'string' ? JSON.parse(resume.parsed_info) : resume.parsed_info;
+      } catch {
+        parsedInfo = resume.parsed_info;
       }
     }
 
@@ -691,6 +712,7 @@ export class ResumeHandler extends BaseHandler {
       originalSize: parseInt(resume.original_size),
       originalMimetype: resume.original_mimetype,
       processedContent: resume.processed_content,
+      parsedInfo,
       jobDescription: resume.job_description,
       optimizationResult: resume.optimization_result,
       evaluation,
@@ -698,6 +720,13 @@ export class ResumeHandler extends BaseHandler {
       status: resume.status,
       createdAt: resume.created_at,
       updatedAt: resume.updated_at,
+      // 去重和版本管理字段
+      contentHash: resume.content_hash,
+      personHash: resume.person_hash,
+      groupId: resume.group_id,
+      isPrimary: !!resume.is_primary,
+      versionLabel: resume.version_label,
+      versionNotes: resume.version_notes,
     };
   }
 

@@ -12,24 +12,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   redirectTo = "/login",
 }) => {
-  const { isLoggedIn, isLoading, user } = useAuthStore();
+  const { isLoggedIn } = useAuthStore();
   const location = useLocation();
-
-  if (isLoading && !user) {
-    return (
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "100vh",
-          backgroundColor: "#f0f2f5",
-        }}
-      >
-        <Spin size="large" tip="加载中..." />
-      </div>
-    );
-  }
 
   if (!isLoggedIn) {
     return <Navigate to={redirectTo} state={{ from: location }} replace />;

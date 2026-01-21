@@ -134,6 +134,25 @@ contextBridge.exposeInMainWorld('electronMenu', {
   on: (channel: string, callback: (...args: any[]) => void) => {
     ipcRenderer.on(channel, callback);
   },
+  // AI HR 助手流式事件监听
+  onAiHrAssistantStreamStart: (callback: (...args: any[]) => void) => {
+    ipcRenderer.on('ai-hr-assistant:stream-start', callback);
+  },
+  onAiHrAssistantStreamChunk: (callback: (...args: any[]) => void) => {
+    ipcRenderer.on('ai-hr-assistant:stream-chunk', callback);
+  },
+  onAiHrAssistantStreamEnd: (callback: (...args: any[]) => void) => {
+    ipcRenderer.on('ai-hr-assistant:stream-end', callback);
+  },
+  onAiHrAssistantStreamError: (callback: (...args: any[]) => void) => {
+    ipcRenderer.on('ai-hr-assistant:stream-error', callback);
+  },
+  removeAiHrAssistantStreamListeners: () => {
+    ipcRenderer.removeAllListeners('ai-hr-assistant:stream-start');
+    ipcRenderer.removeAllListeners('ai-hr-assistant:stream-chunk');
+    ipcRenderer.removeAllListeners('ai-hr-assistant:stream-end');
+    ipcRenderer.removeAllListeners('ai-hr-assistant:stream-error');
+  },
 });
 
 (contextBridge as any).exposeInMainWorld('electronAPI', electronAPI);

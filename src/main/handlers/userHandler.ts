@@ -1,6 +1,7 @@
 import { IpcMainInvokeEvent } from 'electron';
 import { BaseHandler } from './base';
 import { IPC_CHANNELS, ErrorCode } from '../../shared/types';
+import { sessionManager } from '../managers/sessionManager';
 import type {
   UserRegisterRequest,
   UserRegisterResponse,
@@ -124,6 +125,16 @@ export class UserHandler extends BaseHandler {
           code: ErrorCode.INVALID_CREDENTIALS,
         };
       }
+
+      // 设置 SessionManager
+      sessionManager.setCurrentUser({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        userType: user.user_type,
+        createdAt: user.created_at,
+        updatedAt: user.updated_at,
+      });
 
       event.sender.send('user:login-success', {
         userId: user.id,
@@ -321,8 +332,12 @@ export class UserHandler extends BaseHandler {
   private async logout(
     event: IpcMainInvokeEvent
   ): Promise<ApiResponse<void>> {
-    const userId = this.getCurrentUserId(event);
-    logger.info(`用户登出: ${userId}`);
+    // logout 是无状态操作，不检查用户是否已登录
+    logger.info('用户登出');
+
+    // 清除 SessionManager
+    sessionManager.clearCurrentUser();
+
     event.sender.send('user:logout-success');
     return {
       success: true,

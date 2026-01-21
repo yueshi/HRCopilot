@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Typography, Breadcrumb, Card, Row, Col, Alert, Space, Divider, message, Result, Button } from 'antd';
+import { Typography, Breadcrumb, Card, Row, Col, Alert, Space, Divider, message, Result, Button, Tooltip } from 'antd';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   HomeOutlined,
@@ -15,6 +15,7 @@ import {
 } from '@ant-design/icons';
 import FileUpload from '../components/FileUpload';
 import type { ResumeUploadRequest } from '../hooks/useResumeUpload';
+import { getResumeDisplayName, getResumeFilename } from '../utils/displayHelper';
 import type { ResumeData } from '../../../shared/types';
 
 const { Title, Text, Paragraph } = Typography;
@@ -92,8 +93,8 @@ const ResumeUploadPage: React.FC = () => {
           title="简历上传成功！"
           subTitle={
             successData.jobDescription
-              ? 'AI 正在分析您的简历，分析完成后您可以在详情页查看完整报告'
-              : '简历已成功上传，您可以在简历列表中查看并进行AI分析'
+              ?`简历已保存: ${getResumeDisplayName(successData)} - AI 正在分析您的简历，分析完成后您可以在详情页查看完整报告`
+              : `简历已保存: ${getResumeDisplayName(successData)} - 简历已成功上传，您可以在简历列表中查看并进行AI分析`
           }
           extra={[
             <Button key="list" type="primary" onClick={handleViewList}>
@@ -109,8 +110,18 @@ const ResumeUploadPage: React.FC = () => {
           <Title level={5} style={{ marginBottom: 16 }}>简历信息</Title>
           <Row gutter={[16, 16]}>
             <Col span={8}>
+              <Text type="secondary">姓名</Text>
+              <div style={{ marginTop: 4 }}>{getResumeDisplayName(successData)}</div>
+            </Col>
+            <Col span={8}>
               <Text type="secondary">文件名</Text>
-              <div style={{ marginTop: 4 }}>{successData.originalFilename}</div>
+              <div style={{ marginTop: 4 }}>
+                <Tooltip title={successData.originalFilename}>
+                  <Text ellipsis style={{ maxWidth: 150 }}>
+                    {successData.originalFilename}
+                  </Text>
+                </Tooltip>
+              </div>
             </Col>
             <Col span={8}>
               <Text type="secondary">文件大小</Text>

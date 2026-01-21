@@ -60,7 +60,9 @@ export async function invokeIPC(channel: string, ...args: any[]): Promise {
     }
 
     const response = await api(...args);
-    console.log(`IPC 调用成功 [${channel}]:`, response);
+    if (import.meta.env.DEV) {
+      console.log(`IPC 调用成功 [${channel}]:`, response);
+    }
 
     if (response && typeof response === 'object' && 'success' in response) {
       if (!response.success) {
@@ -72,7 +74,17 @@ export async function invokeIPC(channel: string, ...args: any[]): Promise {
 
     return response as T;
   } catch (error) {
-    console.error(`IPC 调用失败 [${channel}]:`, error);
+    const errorMessage = error?.message || String(error);
+
+    // "用户未登录" 是预期内的业务逻辑，用 info 级别
+    if (errorMessage.includes('用户未登录')) {
+      if (import.meta.env.DEV) {
+        console.info(`IPC [${channel}]: 用户未登录`);
+      }
+    } else {
+      console.error(`IPC 调用失败 [${channel}]:`, error);
+    }
+
     throw error;
   }
 }
@@ -88,7 +100,17 @@ export async function invokeIPCFull(channel: string, ...args: any[]): Promise {
     const response = await electronAPI[channel]?.(...args);
     return response as ApiResponse;
   } catch (error) {
-    console.error(`IPC 调用失败 [${channel}]:`, error);
+    const errorMessage = error?.message || String(error);
+
+    // "用户未登录" 是预期内的业务逻辑，用 info 级别
+    if (errorMessage.includes('用户未登录')) {
+      if (import.meta.env.DEV) {
+        console.info(`IPC [${channel}]: 用户未登录`);
+      }
+    } else {
+      console.error(`IPC 调用失败 [${channel}]:`, error);
+    }
+
     throw error;
   }
 }

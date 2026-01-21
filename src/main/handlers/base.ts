@@ -31,7 +31,15 @@ export abstract class BaseHandler {
         // 包装为标准响应格式
         return this.wrapResponse(result);
       } catch (error) {
-        logger.error(`\${channel} 处理失败`, error);
+        const errorMessage = error?.message || String(error);
+
+        // "用户未登录" 是预期的业务逻辑，不视为错误
+        if (errorMessage.includes('用户未登录')) {
+          logger.info(`\${channel} - 用户未登录`);
+        } else {
+          logger.error(`\${channel} 处理失败`, error);
+        }
+
         return this.createErrorResponse(error);
       }
     });
@@ -123,11 +131,19 @@ export abstract class BaseHandler {
 
   /**
    * 获取当前用户 ID
-   * TODO: 后续实现基于 session 的用户管理
+   * 基于 SessionManager 获取已登录用户的 ID
+   * @returns 当前用户 ID，如果未登录则抛出未授权错误
    */
   protected getCurrentUserId(event: IpcMainInvokeEvent): number {
-    // 暂时返回默认用户 ID
-    return 1;
+    // 动态导入以避免循环依赖
+    const { sessionManager } = require('../managers/sessionManager');
+    const userId = sessionManager.getCurrentUserId();
+
+    if (userId === null) {
+      throw new Error('用户未登录，请先登录');
+    }
+
+    return userId;
   }
 
   /**

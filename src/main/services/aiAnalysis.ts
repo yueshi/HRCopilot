@@ -1,4 +1,6 @@
 import { logger } from '../utils/logger';
+import { database } from '../database/sqlite';
+import { llmProviderController } from '../controllers/LLMProviderController';
 
 /**
  * AI 分析请求接口
@@ -6,6 +8,48 @@ import { logger } from '../utils/logger';
 export interface AnalyzeResumeRequest {
   resumeContent: string;
   jobDescription: string;
+}
+
+/**
+ * 流式回调接口
+ */
+export interface StreamCallback {
+  (chunk: string): void;
+}
+
+/**
+ * HR 助手请求接口
+ */
+export interface HRAssistantRequest {
+  resumeId: number;
+  userId: number;
+  message: string;
+  context?: string;
+  model?: string;
+}
+
+/**
+ * HR 助手请求接口（流式）
+ */
+export interface HRAssistantStreamRequest extends HRAssistantRequest {
+  onChunk?: StreamCallback;
+}
+
+/**
+ * 获取建议请求接口
+ */
+export interface GenerateSuggestionRequest {
+  resumeId: number;
+  userId: number;
+  type?: 'question' | 'analysis' | 'evaluation';
+}
+
+/**
+ * 对话消息接口
+ */
+export interface ConversationMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
 }
 
 /**
@@ -46,15 +90,71 @@ export interface InterviewQuestion {
 
 /**
  * AI 分析服务
- * 使用 GLM 4.6 进行简历分析和面试问题生成
+ * 使用配置的 LLM 供应商进行简历分析和面试问题生成
  */
 export class AIAnalysisService {
-  private apiUrl: string;
-  private apiKey: string;
+  // 默认 API 配置（作为后备）
+  private defaultApiUrl: string;
+  private defaultApiKey: string;
 
   constructor() {
-    this.apiUrl = process.env.GLM_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
-    this.apiKey = process.env.GLM_API_KEY || '';
+    this.defaultApiUrl = process.env.GLM_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    this.defaultApiKey = process.env.GLM_API_KEY || '';
+  }
+
+  /**
+   * 获取可用的 LLM 供应商配置
+   */
+  private async getLLMConfig(): Promise<{ apiUrl: string; apiKey: string; model: string }> {
+    try {
+      const provider = await database.getDefaultLLMProviderFull();
+      if (provider && provider.is_enabled && provider.api_key) {
+        return {
+          apiUrl: provider.base_url,
+          apiKey: provider.api_key,
+          model: provider.models?.[0] || 'glm-4',
+        };
+      }
+    } catch (error) {
+      logger.warn('获取 LLM 供应商配置失败，使用默认配置:', error);
+    }
+
+    // 回退到环境变量配置
+    return {
+      apiUrl: this.defaultApiUrl,
+      apiKey: this.defaultApiKey,
+      model: 'glm-4',
+    };
+  }
+
+  /**
+   * 构建对话上下文提示词
+   */
+  private buildContextPrompt(context?: string): string {
+    if (!context) {
+      return '';
+    }
+    return `以下是相关的上下文信息，请参考这些信息回答：
+
+${context}
+
+---
+`;
+  }
+
+  /**
+   * 构建 HR 助手系统提示词
+   */
+  private buildHRSystemPrompt(): string {
+    return `你是一位专业的 HR 助手，专门帮助 HR 分析候选人简历、提供面试建议、回答招聘相关问题。
+
+你的职责包括：
+1. 分析候选人简历与职位要求的匹配度
+2. 生成针对性的面试问题
+3. 提供招聘建议和最佳实践
+4. 回答 HR 相关的专业问题
+
+请以专业、客观、有用的方式回答。`;
   }
 
   /**
@@ -77,7 +177,7 @@ export class AIAnalysisService {
   }
 
   /**
-   * 分析 HR 查询
+   * 分析 HR 查询（同步）
    */
   async analyzeHRQuery(request: any): Promise<any> {
     try {
@@ -96,6 +196,122 @@ export class AIAnalysisService {
     } catch (error) {
       logger.error('HR 查询分析失败:', error);
       throw new Error(`HR 查询分析失败: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * HR 助手对话（流式）
+   */
+  async streamHRAssistantQuery(request: HRAssistantStreamRequest): Promise<string> {
+    try {
+      // 获取对话历史作为上下文
+      const conversationHistory = await database.getLastNConversations({
+        resumeId: request.resumeId,
+        userId: request.userId,
+        count: 10, // 获取最近10条消息作为上下文
+      });
+
+      // 构建消息列表
+      const messages: ConversationMessage[] = [
+        { role: 'system', content: this.buildHRSystemPrompt() },
+        ...conversationHistory,
+        { role: 'user', content: request.message },
+      ];
+
+      // 获取 LLM 配置
+      const config = await this.getLLMConfig();
+
+      // 调用流式 API
+      const response = await this.streamGLM(messages, config, request.onChunk);
+
+      // 保存用户消息到数据库
+      await database.insertConversation({
+        resumeId: request.resumeId,
+      userId: request.userId,
+        role: 'user',
+        content: request.message,
+        messageType: 'chat',
+      });
+
+      // 保存助手回复到数据库
+      await database.insertConversation({
+        resumeId: request.resumeId,
+        userId: request.userId,
+        role: 'assistant',
+        content: response,
+        messageType: 'chat',
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('HR 助手流式查询失败:', error);
+      throw new Error(`HR 助手查询失败: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * 生成智能建议
+   */
+  async generateHRAssistantSuggestion(request: GenerateSuggestionRequest): Promise<string> {
+    try {
+      // 获取简历信息
+      const resume = await database.getResumeById(request.resumeId);
+      if (!resume) {
+        throw new Error('简历不存在');
+      }
+
+      // 根据类型生成不同的提示词
+      let prompt = '';
+      switch (request.type) {
+        case 'question':
+          prompt = `基于以下简历内容，请生成3-5个有针对性的面试问题建议：
+
+简历内容：
+${resume.processed_content || '无解析内容'}
+
+请提供具体的面试问题，每个问题一行。`;
+          break;
+
+        case 'analysis':
+          prompt = `基于以下简历内容，请提供2-3个可能想要询问的分析问题建议：
+
+简历内容：
+${resume.processed_content || '无解析内容'}
+
+请提供用户可能感兴趣的分析问题。`;
+          break;
+
+        case 'evaluation':
+        default:
+          prompt = `基于以下简历内容，请提供2-3个可能想要询问的评估问题建议：
+
+简历内容：
+${resume.processed_content || '无解析内容'}
+职位描述：
+${resume.job_description || '无'}
+
+请提供用户可能感兴趣的评估问题。`;
+          break;
+      }
+
+      // 获取 LLM 配置
+      const config = await this.getLLMConfig();
+
+      const response = await this.callGLMWithConfig(prompt, config);
+
+      // 保存建议到数据库
+      await database.insertConversation({
+        resumeId: request.resumeId,
+        userId: request.userId,
+        role: 'system',
+        content: response,
+        messageType: 'suggestion',
+      });
+
+      return response;
+    } catch (error) {
+      logger.error('生成 HR 助手建议失败:', error);
+      throw new Error(`生成建议失败: ${(error as Error).message}`);
     }
   }
 
@@ -121,22 +337,25 @@ export class AIAnalysisService {
   }
 
   /**
-   * 调用 GLM API
+   * 调用 GLM API（带配置）
    */
-  private async callGLM(prompt: string): Promise<string> {
-    if (!this.apiKey) {
-      throw new Error('GLM API Key 未配置');
+  private async callGLMWithConfig(
+    prompt: string,
+    config: { apiUrl: string; apiKey: string; model: string }
+  ): Promise<string> {
+    if (!config.apiKey) {
+      throw new Error('API Key 未配置');
     }
 
     try {
-      const response = await fetch(this.apiUrl, {
+      const response = await fetch(config.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
+          'Authorization': `Bearer ${config.apiKey}`
         },
         body: JSON.stringify({
-          model: 'glm-4.6',
+          model: config.model,
           messages: [
             {
               role: 'user',
@@ -150,13 +369,101 @@ export class AIAnalysisService {
       });
 
       if (!response.ok) {
-        throw new Error(`GLM API 请求失败: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        throw new Error(`API 请求失败: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json() as any;
       return data.choices?.[0]?.message?.content || '';
     } catch (error) {
-      logger.error('GLM API 调用失败:', error);
+      logger.error('API 调用失败:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 调用 GLM API（兼容旧代码）
+   */
+  private async callGLM(prompt: string): Promise<string> {
+    const config = await this.getLLMConfig();
+    return this.callGLMWithConfig(prompt, config);
+  }
+
+  /**
+   * 流式调用 LLM API
+   */
+  private async streamGLM(
+    messages: ConversationMessage[],
+    config: { apiUrl: string; apiKey: string; model: string },
+    onChunk?: StreamCallback
+  ): Promise<string> {
+    if (!config.apiKey) {
+      throw new Error('API Key 未配置');
+    }
+
+    try {
+      const response = await fetch(config.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.apiKey}`
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: messages.map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+          temperature: 0.3,
+          max_tokens: 2000,
+          stream: true
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`API 请求失败: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('无法获取响应流');
+      }
+
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                fullResponse += content;
+                if (onChunk) {
+                  onChunk(content);
+                }
+              }
+            } catch (e) {
+              // 忽略解析错误，继续处理
+            }
+          }
+        }
+      }
+
+      return fullResponse;
+    } catch (error) {
+      logger.error('流式 API 调用失败:', error);
       throw error;
     }
   }

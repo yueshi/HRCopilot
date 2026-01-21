@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Layout as AntLayout } from "antd";
 
 import Layout from "./components/Layout";
@@ -8,6 +8,8 @@ import HomePage from "./pages/HomePage";
 import ResumeUploadPage from "./pages/ResumeUploadPage";
 import ResumeListPage from "./pages/ResumeListPage";
 import ResumeDetailPage from "./pages/ResumeDetailPage";
+import HRAssistantPage from "./pages/HRAssistantPage";
+import VersionManagePage from "./pages/VersionManagePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -54,10 +56,12 @@ const MainWindowApp: React.FC = () => {
           try {
             console.log("[MainWindowApp] 开始从服务器获取用户信息");
             await fetchUser();
-            console.log("[MainWindowApp] fetchUser 完成");
+            console.log("[MainWindowMainWindowApp] fetchUser 完成");
           } catch (error) {
-            console.error("[MainWindowApp] 获取用户信息失败:", error);
-            userApi.logout();
+            // Session 失效，静默清理
+            if (import.meta.env.DEV) {
+              console.info("[MainWindowApp] Session 已失效");
+            }
           }
         }
       } catch (error) {
@@ -82,71 +86,59 @@ const MainWindowApp: React.FC = () => {
     user,
   });
 
+  // 初始化中显示加载界面
   if (isLoading || isInitializing) {
     console.log("[MainWindowApp] 显示加载屏幕");
     return <LoadingScreen />;
   }
 
-  if (!isLoggedIn && authChecked) {
-    console.log("[MainWindowApp] 显示登录路由，未登录且已检查状态");
-    return (
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    );
-  }
-
-  console.log("[MainWindowApp] 显示主路由，已登录");
+  // 渲染主路由
   return (
     <Routes>
+      {/* 首页重定向 */}
       <Route path="/" element={<Navigate to="/home" replace />} />
 
+      {/* 登录/注册路由 */}
       <Route
-        path="/home"
+        path="/login"
         element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
+          isLoggedIn ? <Navigate to="/home" replace /> : <LoginPage />
         }
-      >
+      />
+      <Route
+        path="/register"
+        element={
+          isLoggedIn ? <Navigate to="/home" replace /> : <RegisterPage />
+        }
+      />
+
+      {/* 需要认证的路由 */}
+      <Route path="/home" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<HomePage />} />
       </Route>
 
-      <Route
-        path="/resumes"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
+      <Route path="/resumes" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<ResumeListPage />} />
         <Route path=":id" element={<ResumeDetailPage />} />
+        <Route path=":id/hr-assistant" element={<HRAssistantPage />} />
+        <Route path=":id/versions" element={<VersionManagePage />} />
       </Route>
 
-      <Route
-        path="/upload"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
+      <Route path="/upload" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<ResumeUploadPage />} />
       </Route>
 
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Layout />
-          </ProtectedRoute>
-        }
-      >
+      <Route path="/settings" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<SettingsPage />} />
       </Route>
+
+      {/* 未登录且不是登录/注册页面，重定向到登录页 */}
+      <Route
+        path="*"
+        element={
+          isLoggedIn ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />
+        }
+      />
     </Routes>
   );
 };

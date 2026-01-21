@@ -42,11 +42,13 @@ import {
   UserOutlined,
   ManOutlined,
   WomanOutlined,
+  PaperClipOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useResumes } from '../hooks';
 import { resumeApi } from '../services/resumeIpcService';
 import type { ResumeData } from '../../../shared/types';
+import { getResumeDisplayName, getResumeFilename, hasParsedName } from '../utils/displayHelper';
 import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
@@ -167,7 +169,7 @@ const ResumeListPage: React.FC = () => {
       case 'completed':
         return <CheckCircleOutlined />;
       case 'processing':
-        return <SyncOutlined spin />;
+        return <SyncOutlined />;
       case 'failed':
         return <ExclamationCircleOutlined />;
       case 'uploaded':
@@ -205,10 +207,12 @@ const ResumeListPage: React.FC = () => {
   const filteredResumes = useMemo(() => {
     return resumes
       .filter(resume => {
-        // 搜索过滤
+        // 搜索过滤：同时支持姓名和文件名
         if (searchText) {
           const searchLower = searchText.toLowerCase();
-          return resume.originalFilename.toLowerCase().includes(searchLower);
+          const displayName = getResumeDisplayName(resume).toLowerCase();
+          const filename = resume.originalFilename.toLowerCase();
+          return displayName.includes(searchLower) || filename.includes(searchLower);
         }
         return true;
       })
@@ -223,7 +227,7 @@ const ResumeListPage: React.FC = () => {
           case 'createdAt':
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
           case 'filename':
-            return a.originalFilename.localeCompare(b.originalFilename);
+            return getResumeDisplayName(a).localeCompare(getResumeDisplayName(b));
           case 'status':
             return a.status.localeCompare(b.status);
           case 'score':
@@ -292,7 +296,7 @@ const ResumeListPage: React.FC = () => {
             <Statistic
               title="处理中"
               value={stats.processing}
-              prefix={<SyncOutlined spin />}
+              prefix={<SyncOutlined />}
               valueStyle={{ color: '#faad14' }}
             />
           </Card>
@@ -367,6 +371,16 @@ const ResumeListPage: React.FC = () => {
                     )}
                   </Space>
 
+                  {/* 文件名 - 关键信息 */}
+                  <Tooltip title={getResumeFilename(resume)}>
+                    <Space size={4} style={{ fontSize: 12, color: '#666' }}>
+                      <PaperClipOutlined />
+                      <Text type="secondary" ellipsis style={{ maxWidth: 100 }}>
+                        {getResumeFilename(resume)}
+                      </Text>
+                    </Space>
+                  </Tooltip>
+
                   {(resume.parsedInfo?.name || resume.parsedInfo?.gender) && (
                     <div>
                       {resume.parsedInfo.name && (
@@ -407,21 +421,33 @@ const ResumeListPage: React.FC = () => {
   const TableView = () => {
     const columns = [
       {
-        title: '简历名称',
-        dataIndex: 'originalFilename' as const,
-        key: 'filename',
-        ellipsis: true,
-        render: (filename: string, record: ResumeData) => (
+        title: '姓名',
+        key: 'name',
+        render: (_: any, record: ResumeData) => (
           <Space>
             <Avatar
               icon={getGenderAvatarIcon(record.parsedInfo?.gender)}
               size="small"
               style={{ backgroundColor: getGenderAvatarColor(record.parsedInfo?.gender) }}
             />
-            <Tooltip title={filename}>
-              <Text ellipsis style={{ maxWidth: 150 }}>{filename}</Text>
+            <Tooltip title={getResumeDisplayName(record)}>
+              <Text ellipsis style={{ maxWidth: 100 }}>{getResumeDisplayName(record)}</Text>
             </Tooltip>
           </Space>
+        ),
+      },
+      {
+        title: '文件名',
+        key: 'filename',
+        render: (_: any, record: ResumeData) => (
+          <Tooltip title={getResumeFilename(record)}>
+            <Space size={4} style={{ width: '100%' }}>
+              <PaperClipOutlined style={{ color: '#666' }} />
+              <Text type="secondary" ellipsis style={{ maxWidth: 120 }}>
+                {getResumeFilename(record)}
+              </Text>
+            </Space>
+          </Tooltip>
         ),
       },
       {
@@ -543,7 +569,7 @@ const ResumeListPage: React.FC = () => {
         <Row gutter={[16, 16]} align="middle">
           <Col xs={24} sm={12} md={6}>
             <Search
-              placeholder="搜索简历名称"
+              placeholder="搜索简历姓名或文件名"
               onSearch={handleSearch}
               style={{ width: '100%' }}
               allowClear
@@ -571,7 +597,7 @@ const ResumeListPage: React.FC = () => {
               style={{ width: '100%' }}
             >
               <Select.Option value="createdAt">创建时间</Select.Option>
-              <Select.Option value="filename">文件名</Select.Option>
+              <Select.Option value="filename">姓名</Select.Option>
               <Select.Option value="status">状态</Select.Option>
               <Select.Option value="score">评分</Select.Option>
             </Select>

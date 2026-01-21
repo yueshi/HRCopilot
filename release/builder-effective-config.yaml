@@ -1,0 +1,35 @@
+directories:
+  output: release
+  buildResources: build
+appId: com.hrcopilot.desktop
+productName: HRCopilot
+files:
+  - filter:
+      - dist/**/*
+      - package.json
+extraResources:
+  - from: assets
+    to: assets
+nodeGypRebuild: true
+npmRebuild: true
+mac:
+  category: public.app-category.productivity
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+electronVersion: 28.3.3

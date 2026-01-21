@@ -147,8 +147,13 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         set({ user: userData, isLoggedIn: true });
       }
     } catch (error) {
-      console.error('获取用户信息失败:', error);
+      // 静默处理登录状态失效，只在调试模式下输出
+      if (import.meta.env.DEV) {
+        console.info('[Auth] Session 已失效，需要重新登录');
+      }
       set({ isLoggedIn: false });
+      // 清除本地存储
+      userApi.logout().catch(() => {});
     }
   },
 

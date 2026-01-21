@@ -1218,6 +1218,370 @@ export class DatabaseService {
 
     return result.changes;
   }
+
+  // ============ AI 对话相关方法 ============
+
+  /**
+   * 插入对话消息
+   */
+  async insertConversation(data: {
+    resumeId: number;
+    userId: number;
+    role: 'user' | 'assistant' | 'system';
+    content: string;
+    messageType?: 'chat' | 'suggestion' | 'analysis';
+    metadata?: any;
+    tokenCount?: number;
+    isSummary?: boolean;
+  }): Promise<number> {
+    const db = this.getDatabase();
+
+    const result = db.prepare(`
+      INSERT INTO ai_conversations (
+        resume_id, user_id, role, content, message_type,
+        metadata, token_count, is_summary
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      data.resumeId,
+      data.userId,
+      data.role,
+      data.content,
+      data.messageType || 'chat',
+      data.metadata ? JSON.stringify(data.metadata) : null,
+      data.tokenCount || 0,
+      data.isSummary ? 1 : 0,
+    );
+
+    return result.lastInsertRowid as number;
+  }
+
+  /**
+   * 获取对话历史
+   */
+  async getConversations(params: {
+    resumeId: number;
+    userId: number;
+    limit?: number;
+    offset?: number;
+  }): Promise<any[]> {
+    const db = this.getDatabase();
+    const limit = params.limit || 50;
+    const offset = params.offset || 0;
+
+    const rows = db.prepare(`
+      SELECT * FROM ai_conversations
+      WHERE resume_id = ? AND user_id = ?
+      ORDER BY created_at ASC
+      LIMIT ? OFFSET ?
+    `).all(params.resumeId, params.userId, limit, offset) as any[];
+
+    return rows.map((row) => ({
+      id: row.id,
+      resume_id: row.resume_id,
+      user_id: row.user_id,
+      role: row.role,
+      content: row.content,
+      message_type: row.message_type,
+      metadata: row.metadata ? JSON.parse(row.metadata) : null,
+      token_count: row.token_count,
+      is_summary: row.is_summary === 1,
+      created_at: row.created_at,
+    }));
+  }
+
+  /**
+   * 获取最近N条消息（用于构建对话上下文）
+   */
+  async getLastNConversations(params: {
+    resumeId: number;
+    userId: number;
+    count: number;
+  }): Promise<any[]> {
+    const db = this.getDatabase();
+
+    const rows = db.prepare(`
+      SELECT * FROM ai_conversations
+      WHERE resume_id = ? AND user_id = ? AND message_type = 'chat' AND is_summary = 0
+      ORDER BY created_at DESC
+      LIMIT ?
+    `).all(params.resumeId, params.userId, params.count) as any[];
+
+    // 返回按时间正序排列的结果
+    return rows.reverse().map((row) => ({
+      role: row.role,
+      content: row.content,
+    }));
+  }
+
+  /**
+   * 清除对话历史
+   */
+  async clearConversations(params: {
+    resumeId: number;
+    userId: number;
+  }): Promise<number> {
+    const db = this.getDatabase();
+
+    const result = db.prepare(`
+      DELETE FROM ai_conversations
+      WHERE resume_id = ? AND user_id = ?
+    `).run(params.resumeId, params.userId);
+
+    return result.changes;
+  }
+
+  /**
+   * 删除单条对话消息
+   */
+  async deleteConversation(conversationId: number): Promise<void> {
+    const db = this.getDatabase();
+    db.prepare("DELETE FROM ai_conversations WHERE id = ?").run(conversationId);
+  }
+
+  /**
+   * 获取对话消息数量
+   */
+  async getConversationCount(params: {
+    resumeId: number;
+    userId: number;
+  }): Promise<number> {
+    const db = this.getDatabase();
+
+    const result = db.prepare(`
+      SELECT COUNT(*) as count FROM ai_conversations
+      WHERE resume_id = ? AND user_id = ?
+    `).get(params.resumeId, params.userId) as { count: number };
+
+    return result.count;
+  }
+
+  // ============ 简历组/版本管理相关方法 ============
+
+  /**
+   * 创建简历组
+   */
+  async createResumeGroup(data: {
+    userId: number;
+    groupName: string;
+    primaryResumeId: number;
+    description?: string;
+  }): Promise<number> {
+    const db = this.getDatabase();
+
+    const result = db.prepare(`
+      INSERT INTO resume_groups (user_id, group_name, primary_resume_id, description)
+      VALUES (?, ?, ?, ?)
+    `).run(data.userId, data.groupName, data.primaryResumeId, data.description || null);
+
+    const groupId = result.lastInsertRowid as number;
+
+    // 更新主简历的 group_id
+    db.prepare(`UPDATE resumes SET group_id = ? WHERE id = ?`).run(groupId, data.primaryResumeId);
+
+    return groupId;
+  }
+
+  /**
+   * 获取简历组
+   */
+  async getResumeGroup(groupId: number): Promise<any | null> {
+    const db = this.getDatabase();
+    const row = db.prepare(`SELECT * FROM resume_groups WHERE id = ?`).get(groupId) as any;
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      userId: row.user_id,
+      groupName: row.group_name,
+      primaryResumeId: row.primary_resume_id,
+      description: row.description,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    };
+  }
+
+  /**
+   * 获取用户的所有简历组
+   */
+  async getResumeGroupsByUserId(userId: number): Promise<any[]> {
+    const db = this.getDatabase();
+    const rows = db.prepare(`
+      SELECT * FROM resume_groups WHERE user_id = ? ORDER BY created_at DESC
+    `).all(userId) as any[];
+
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      groupName: row.group_name,
+      primaryResumeId: row.primary_resume_id,
+      description: row.description,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  /**
+   * 获取组内的所有简历
+   */
+  async getResumesInGroup(groupId: number): Promise<any[]> {
+    const db = this.getDatabase();
+    const rows = db.prepare(`
+      SELECT * FROM resumes WHERE group_id = ? ORDER BY created_at ASC
+    `).all(groupId) as any[];
+
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      originalFilename: row.original_filename,
+      originalPath: row.original_path,
+      originalSize: row.original_size,
+      originalMimetype: row.original_mimetype,
+      processedContent: row.processed_content,
+      jobDescription: row.job_description,
+      status: row.status,
+      groupId: row.group_id,
+      isPrimary: row.is_primary === 1,
+      versionLabel: row.version_label,
+      versionNotes: row.version_notes,
+      parsedInfo: row.parsed_info ? JSON.parse(row.parsed_info) : null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
+  }
+
+  /**
+   * 将简历添加到组
+   */
+  async addResumeToGroup(data: {
+    resumeId: number;
+    groupId: number;
+    versionLabel?: string;
+    versionNotes?: string;
+  }): Promise<void> {
+    const db = this.getDatabase();
+
+    const fields: string[] = ['group_id = ?'];
+    const values: any[] = [data.groupId];
+
+    if (data.versionLabel !== undefined) {
+      fields.push('version_label = ?');
+      values.push(data.versionLabel);
+    }
+
+    if (data.versionNotes !== undefined) {
+      fields.push('version_notes = ?');
+      values.push(data.versionNotes);
+    }
+
+    fields.push('updated_at = CURRENT_TIMESTAMP');
+    values.push(data.resumeId);
+
+    db.prepare(`UPDATE resumes SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  }
+
+  /**
+   * 设置组的主简历
+   */
+  async setPrimaryResume(groupId: number, resumeId: number): Promise<void> {
+    const db = this.getDatabase();
+
+    // 使用事务更新
+    db.transaction(() => {
+      // 将组内所有简历的 is_primary 设为 0
+      db.prepare(`UPDATE resumes SET is_primary = 0 WHERE group_id = ?`).run(groupId);
+
+      // 将指定简历设为主版本
+      db.prepare(`UPDATE resumes SET is_primary = 1 WHERE id = ?`).run(resumeId);
+
+      // 更新组的 primary_resume_id
+      db.prepare(`UPDATE resume_groups SET primary_resume_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(resumeId, groupId);
+    })();
+  }
+
+  /**
+   * 合并两个简历组
+   */
+  async mergeResumeGroups(sourceGroupId: number, targetGroupId: number): Promise<void> {
+    const db = this.getDatabase();
+
+    db.transaction(() => {
+      // 将源组内的简历移动到目标组
+      db.prepare(`UPDATE resumes SET group_id = ? WHERE group_id = ?`).run(targetGroupId, sourceGroupId);
+
+      // 删除源组
+      db.prepare(`DELETE FROM resume_groups WHERE id = ?`).run(sourceGroupId);
+    })();
+  }
+
+  /**
+   * 删除简历组
+   */
+  async deleteResumeGroup(groupId: number, deleteResumes: boolean = false): Promise<void> {
+    const db = this.getDatabase();
+
+    db.transaction(() => {
+      if (deleteResumes) {
+        // 删除组内所有简历
+        db.prepare(`DELETE FROM resumes WHERE group_id = ?`).run(groupId);
+      } else {
+        // 将简历的 group_id 设为 null
+        db.prepare(`UPDATE resumes SET group_id = NULL, is_primary = 0 WHERE group_id = ?`).run(groupId);
+      }
+
+      // 删除组
+      db.prepare(`DELETE FROM resume_groups WHERE id = ?`).run(groupId);
+    })();
+  }
+
+  /**
+   * 更新简历组
+   */
+  async updateResumeGroup(groupId: number, data: {
+    groupName?: string;
+    description?: string;
+  }): Promise<void> {
+    const db = this.getDatabase();
+
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (data.groupName !== undefined) {
+      fields.push('group_name = ?');
+      values.push(data.groupName);
+    }
+
+    if (data.description !== undefined) {
+      fields.push('description = ?');
+      values.push(data.description);
+    }
+
+    if (fields.length > 0) {
+      fields.push('updated_at = CURRENT_TIMESTAMP');
+      values.push(groupId);
+      db.prepare(`UPDATE resume_groups SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    }
+  }
+
+  /**
+   * 检查简历是否属于指定用户
+   */
+  async isResumeOwner(userId: number, resumeId: number): Promise<boolean> {
+    const db = this.getDatabase();
+    const result = db.prepare(`SELECT id FROM resumes WHERE id = ? AND user_id = ?`).get(resumeId, userId) as any;
+    return result !== undefined;
+  }
+
+  /**
+   * 检查简历组是否属于指定用户
+   */
+  async isResumeGroupOwner(userId: number, groupId: number): Promise<boolean> {
+    const db = this.getDatabase();
+    const result = db.prepare(`SELECT id FROM resume_groups WHERE id = ? AND user_id = ?`).get(groupId, userId) as any;
+    return result !== undefined;
+  }
 }
 
 // 导出单例实例

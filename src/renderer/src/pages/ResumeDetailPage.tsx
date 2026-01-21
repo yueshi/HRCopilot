@@ -43,6 +43,7 @@ import {
   RocketOutlined,
   TrophyOutlined,
   CloseCircleOutlined,
+  SyncOutlined,
 } from '@ant-design/icons';
 import { resumeApi } from '../services/resumeIpcService';
 import type { ResumeData, ResumeStatusData, ParsedResumeInfo } from '../../../shared/types';
@@ -202,7 +203,7 @@ const ResumeDetailPage: React.FC = () => {
   const getStatusTag = (status: string) => {
     const statusMap = {
       pending: { color: 'blue', text: '已上传', icon: <FileTextOutlined /> },
-      processing: { color: 'orange', text: '处理中', icon: <Spin size="small" /> },
+      processing: { color: 'orange', text: '处理中', icon: <SyncOutlined /> },
       completed: { color: 'green', text: '已完成', icon: <CheckCircleOutlined /> },
       failed: { color: 'red', text: '处理失败', icon: <ExclamationCircleOutlined /> },
     };
