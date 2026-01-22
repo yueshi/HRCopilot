@@ -170,11 +170,15 @@ export class LLMProviderController {
   /**
    * 同步模型列表
    */
-  async syncModels(request: LLMModelsSyncRequest): Promise<LLMModelsSyncResult> {
+  async syncModels(
+    request: LLMModelsSyncRequest,
+  ): Promise<LLMModelsSyncResult> {
     try {
       const models = await llmService.syncModels(request.provider_id);
 
-      logger.info(`同步模型列表成功: ${request.provider_id}, ${models.length} 个模型`);
+      logger.info(
+        `同步模型列表成功: ${request.provider_id}, ${models.length} 个模型`,
+      );
 
       return {
         success: true,
@@ -201,7 +205,7 @@ export class LLMProviderController {
     model?: string;
   }): Promise<{
     success: boolean;
-    response?: string;
+    data?: string;
     error?: string;
   }> {
     try {
@@ -222,7 +226,7 @@ export class LLMProviderController {
         contentLength: result.content?.length || 0,
       });
 
-      return { success: true, response: result.content };
+      return { success: true, data: result.content };
     } catch (error) {
       logger.error("供应商聊天失败:", error);
       return { success: false, error: (error as Error).message };

@@ -44,11 +44,7 @@ interface SettingActions {
     providerId: string;
     message: string;
     model?: string;
-  }) => Promise<{
-    success: boolean;
-    response?: string;
-    error?: string;
-  }>;
+  }) => Promise<string>;
 
   // 任务配置相关
   fetchTaskConfigs: () => Promise<void>;

@@ -15,41 +15,45 @@ export interface ApiResponse<T = any> {
  * 错误码枚举
  */
 export enum ErrorCode {
-  UNKNOWN = 'UNKNOWN_ERROR',
-  INVALID_PARAMS = 'INVALID_PARAMS',
-  INTERNAL_ERROR = 'INTERNAL_ERROR',
-  NOT_FOUND = 'NOT_FOUND',
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  USER_NOT_FOUND = 'USER_NOT_FOUND',
-  USER_EXISTS = 'USER_EXISTS',
-  INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
-  PASSWORD_MISMATCH = 'PASSWORD_MISMATCH',
-  UNAUTHORIZED = 'UNAUTHORIZED',
-  FORBIDDEN = 'FORBIDDEN',
-  RESUME_NOT_FOUND = 'RESUME_NOT_FOUND',
-  RESUME_UPLOAD_FAILED = 'RESUME_UPLOAD_FAILED',
-  RESUME_PARSE_FAILED = 'RESUME_PARSE_FAILED',
-  RESUME_ANALYSIS_FAILED = 'RESUME_ANALYSIS_FAILED',
-  RESUME_OPTIMIZATION_FAILED = 'RESUME_OPTIMIZATION_FAILED',
-  FILE_NOT_FOUND = 'FILE_NOT_FOUND',
-  FILE_TOO_LARGE = 'FILE_TOO_LARGE',
-  INVALID_FILE_TYPE = 'INVALID_FILE_TYPE',
-  FILE_READ_ERROR = 'FILE_READ_ERROR',
-  DATABASE_ERROR = 'DATABASE_ERROR',
-  DATABASE_CONNECTION_FAILED = 'DATABASE_CONNECTION_FAILED',
-  AI_SERVICE_ERROR = 'AI_SERVICE_ERROR',
-  AI_QUOTA_EXCEEDED = 'AI_QUOTA_EXCEEDED',
-  AI_TIMEOUT = 'AI_TIMEOUT',
-  ALREADY_EXISTS = 'ALREADY_EXISTS',
+  UNKNOWN = "UNKNOWN_ERROR",
+  INVALID_PARAMS = "INVALID_PARAMS",
+  INTERNAL_ERROR = "INTERNAL_ERROR",
+  NOT_FOUND = "NOT_FOUND",
+  VALIDATION_ERROR = "VALIDATION_ERROR",
+  USER_NOT_FOUND = "USER_NOT_FOUND",
+  USER_EXISTS = "USER_EXISTS",
+  INVALID_CREDENTIALS = "INVALID_CREDENTIALS",
+  PASSWORD_MISMATCH = "PASSWORD_MISMATCH",
+  UNAUTHORIZED = "UNAUTHORIZED",
+  FORBIDDEN = "FORBIDDEN",
+  RESUME_NOT_FOUND = "RESUME_NOT_FOUND",
+  RESUME_UPLOAD_FAILED = "RESUME_UPLOAD_FAILED",
+  RESUME_PARSE_FAILED = "RESUME_PARSE_FAILED",
+  RESUME_ANALYSIS_FAILED = "RESUME_ANALYSIS_FAILED",
+  RESUME_OPTIMIZATION_FAILED = "RESUME_OPTIMIZATION_FAILED",
+  FILE_NOT_FOUND = "FILE_NOT_FOUND",
+  FILE_TOO_LARGE = "FILE_TOO_LARGE",
+  INVALID_FILE_TYPE = "INVALID_FILE_TYPE",
+  FILE_READ_ERROR = "FILE_READ_ERROR",
+  DATABASE_ERROR = "DATABASE_ERROR",
+  DATABASE_CONNECTION_FAILED = "DATABASE_CONNECTION_FAILED",
+  AI_SERVICE_ERROR = "AI_SERVICE_ERROR",
+  AI_QUOTA_EXCEEDED = "AI_QUOTA_EXCEEDED",
+  AI_TIMEOUT = "AI_TIMEOUT",
+  ALREADY_EXISTS = "ALREADY_EXISTS",
 }
 
-export type UserType = 'free' | 'vip' | 'admin';
-export type ResumeStatus = 'pending' | 'processing' | 'completed' | 'failed';
-export type QuestionDifficulty = 'easy' | 'medium' | 'hard';
-export type QuestionType = 'technical' | 'behavioral' | 'situational';
+export type UserType = "free" | "vip" | "admin";
+export type ResumeStatus = "pending" | "processing" | "completed" | "failed";
+export type QuestionDifficulty = "easy" | "medium" | "hard";
+export type QuestionType = "technical" | "behavioral" | "situational";
 
 // 去重操作类型
-export type DeduplicationAction = 'skip' | 'overwrite' | 'new_version' | 'proceed';
+export type DeduplicationAction =
+  | "skip"
+  | "overwrite"
+  | "new_version"
+  | "proceed";
 
 export interface UserRegisterRequest {
   email: string;
@@ -114,8 +118,8 @@ export interface ResumeOptimizeRequest {
   job: string;
   options?: {
     focusAreas?: string[];
-    tone?: 'professional' | 'enthusiastic' | 'confident';
-    length?: 'short' | 'medium' | 'long';
+    tone?: "professional" | "enthusiastic" | "confident";
+    length?: "short" | "medium" | "long";
   };
 }
 
@@ -176,14 +180,14 @@ export interface ParsedResumeInfo {
   phone?: string;
   email?: string;
   address?: string;
-  skills?: string[];
-  education?: Array<{
+  skills: string[];
+  education: Array<{
     school?: string;
     degree?: string;
     major?: string;
     period?: string;
   }>;
-  experience?: Array<{
+  experience: Array<{
     company?: string;
     position?: string;
     period?: string;
@@ -300,7 +304,7 @@ export interface OptimizeRequest {
   options?: {
     focusAreas?: string[];
     tone?: string;
-    length?: 'short' | 'medium' | 'long';
+    length?: "short" | "medium" | "long";
   };
 }
 
@@ -317,7 +321,7 @@ export interface OptimizeResult {
 export interface QuestionRequest {
   resumeId: number;
   jobDescription?: string;
-  questionType?: 'technical' | 'behavioral' | 'situational' | 'all';
+  questionType?: "technical" | "behavioral" | "situational" | "all";
   count?: number;
 }
 
@@ -336,7 +340,7 @@ export interface DatabaseStats {
   totalResumes: number;
   totalUsers: number;
   recentActivity: Array<{
-    type: 'upload' | 'optimize' | 'evaluate';
+    type: "upload" | "optimize" | "evaluate";
     timestamp: Date;
     details: string;
   }>;
@@ -387,7 +391,7 @@ export interface ResumeGroupData {
  * 去重检测结果
  */
 export interface DeduplicationResult {
-  exactDuplicate?: ResumeData;      // 完全相同的文件
+  exactDuplicate?: ResumeData; // 完全相同的文件
   samePersonResumes?: ResumeData[]; // 同一人的其他简历
   suggestedAction?: DeduplicationAction;
 }
@@ -459,9 +463,9 @@ export interface AIHRAssistantMessage {
   id: number;
   resumeId: number;
   userId: number;
-  role: 'user' | 'assistant' | 'system';
+  role: "user" | "assistant" | "system";
   content: string;
-  messageType: 'chat' | 'suggestion' | 'analysis';
+  messageType: "chat" | "suggestion" | "analysis";
   metadata?: {
     type?: string;
     referencedPart?: string;
@@ -527,7 +531,7 @@ export interface AIHRAssistantClearHistoryRequest {
  */
 export interface AIHRAssistantGenerateSuggestionRequest {
   resumeId: number;
-  type?: 'improvement' | 'interview' | 'career' | 'all';
+  type?: "improvement" | "interview" | "career" | "all";
 }
 
 /**

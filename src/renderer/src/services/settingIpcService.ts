@@ -1,5 +1,5 @@
-import { invokeIPC } from './ipcApi';
-import { IPC_CHANNELS } from '../../../shared/types';
+import { invokeIPC } from "./ipcApi";
+import { IPC_CHANNELS } from "../../../shared/types";
 import type {
   LLMProvider,
   LLMProviderCreateRequest,
@@ -9,7 +9,7 @@ import type {
   LLMModelsSyncRequest,
   LLMModelsSyncResult,
   LLMTaskConfig,
-} from '../../../shared/types/llm';
+} from "../../../shared/types/llm";
 
 /**
  * 设置 IPC 服务
@@ -81,7 +81,10 @@ export const settingApi = {
    * 设置默认供应商
    */
   setDefaultProvider: async (providerId: string): Promise<void> => {
-    return invokeIPC<void>(IPC_CHANNELS.SETTING.PROVIDER_SET_DEFAULT, providerId);
+    return invokeIPC<void>(
+      IPC_CHANNELS.SETTING.PROVIDER_SET_DEFAULT,
+      providerId,
+    );
   },
 
   /**
@@ -95,17 +98,14 @@ export const settingApi = {
 
   /**
    * 使用指定供应商进行简单聊天
+   * 返回 AI 响应文本
    */
   chat: async (request: {
     providerId: string;
     message: string;
     model?: string;
-  }): Promise<{
-    success: boolean;
-    response?: string;
-    error?: string;
-  }> => {
-    return invokeIPC(IPC_CHANNELS.SETTING.PROVIDER_CHAT, request);
+  }): Promise<string> => {
+    return invokeIPC<string>(IPC_CHANNELS.SETTING.PROVIDER_CHAT, request);
   },
 
   // ============ 任务配置相关 ============
@@ -142,6 +142,9 @@ export const settingApi = {
   syncModels: async (
     request: LLMModelsSyncRequest,
   ): Promise<LLMModelsSyncResult> => {
-    return invokeIPC<LLMModelsSyncResult>(IPC_CHANNELS.SETTING.MODELS_SYNC, request);
+    return invokeIPC<LLMModelsSyncResult>(
+      IPC_CHANNELS.SETTING.MODELS_SYNC,
+      request,
+    );
   },
 };
