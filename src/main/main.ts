@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog, ipcMain, shell, Menu } from "electron";
+import type { BrowserWindow as BrowserWindowType } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import fs from "fs/promises";
@@ -394,10 +395,26 @@ app.whenReady().then(() => {
 // macOS activate 事件
 app.on("activate", () => {
   // 当应用被激活（点击 dock 图标）时
-  // 如果没有窗口，显示主窗口
-  if (BrowserWindow.getAllWindows().length === 0 && !appLifecycle.isQuitting()) {
-    windowManager.showMainWindow();
-    windowManager.showMinibarWindow();
+
+  if (!appLifecycle.isQuitting()) {
+    const mainWindow = windowManager.getMainWindow();
+    const minibarWindow = windowManager.getMinibarWindow();
+
+    // 如果主窗口正在显示，保持主窗口显示，不显示 Minibar 窗口
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.isVisible()) {
+      logger.info("主窗口正在显示，保持显示状态");
+    }
+    // 如果主窗口关闭，优先显示 Minibar 窗口
+    else {
+      // 如果 Minibar 窗口存在但隐藏，显示它
+      if (minibarWindow && !minibarWindow.isDestroyed() && !minibarWindow.isVisible()) {
+        minibarWindow.show();
+      }
+      // 如果 Minibar 窗口不存在（null 或已销毁），创建它
+      else if (!minibarWindow || minibarWindow.isDestroyed()) {
+        windowManager.showMinibarWindow();
+      }
+    }
   }
 });
 

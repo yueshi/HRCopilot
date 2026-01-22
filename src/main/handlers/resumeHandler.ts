@@ -192,9 +192,15 @@ export class ResumeHandler extends BaseHandler {
 
       // 更新 processedContent 和 parsed_info
       const db = database.getDatabase();
+      const parsedInfoJson = JSON.stringify(parsedInfo || {});
+      logger.info("准备保存解析信息到数据库", {
+        resumeId,
+        parsedInfoJsonLength: parsedInfoJson.length,
+        parsedInfoString: parsedInfoJson.substring(0, 500) + (parsedInfoJson.length > 500 ? "..." : ""),
+      });
       db.prepare(
         'UPDATE resumes SET processed_content = ?, parsed_info = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      ).run(parsedContent, JSON.stringify(parsedInfo || {}), resumeId);
+      ).run(parsedContent, parsedInfoJson, resumeId);
 
       // 如果创建了新组，更新简历组
       if (groupId && isPrimary === 1) {
@@ -350,9 +356,34 @@ export class ResumeHandler extends BaseHandler {
         };
       }
 
+      // 调试日志：显示数据库中的原始数据
+      logger.info("从数据库获取的简历原始数据", {
+        resumeId: request.id,
+        hasProcessedContent: !!resume.processed_content,
+        processedContentLength: resume.processed_content?.length || 0,
+        hasParsedInfo: !!resume.parsed_info,
+        parsedInfo: resume.parsed_info
+          ? resume.parsed_info.toString().substring(0, 500) + (resume.parsed_info.toString().length > 500 ? "..." : "")
+          : "null",
+        parsedInfoType: typeof resume.parsed_info,
+      });
+
+      const convertedData = this.convertToResumeData(resume);
+
+      // 调试日志：显示转换后的数据
+      logger.info("简历数据转换完成", {
+        resumeId: request.id,
+        parsedInfoName: convertedData.parsedInfo?.name,
+        parsedInfoEmail: convertedData.parsedInfo?.email,
+        parsedInfoPhone: convertedData.parsedInfo?.phone,
+        skillsCount: convertedData.parsedInfo?.skills?.length || 0,
+        educationCount: convertedData.parsedInfo?.education?.length || 0,
+        experienceCount: convertedData.parsedInfo?.experience?.length || 0,
+      });
+
       return {
         success: true,
-        data: this.convertToResumeData(resume),
+        data: convertedData,
         timestamp: new Date().toISOString(),
       };
     } catch (error: any) {

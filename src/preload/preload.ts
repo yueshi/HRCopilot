@@ -129,6 +129,9 @@ contextBridge.exposeInMainWorld('electronMenu', {
   onWindowStateChanged: (callback: () => void) => {
     ipcRenderer.on('window-state-changed', callback);
   },
+  onMinibarWindowShown: (callback: () => void) => {
+    ipcRenderer.on('minibar-window-shown', callback);
+  },
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);
   },

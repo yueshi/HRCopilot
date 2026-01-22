@@ -1,4 +1,5 @@
 import { app, BrowserWindow, screen, ipcMain } from "electron";
+import type { BrowserWindow as BrowserWindowType } from "electron";
 import path from "path";
 import * as url from "url";
 import fs from "fs/promises";
@@ -268,6 +269,7 @@ class WindowManager {
       frame: false,
       transparent: true,
       alwaysOnTop: true,
+      movable: true,  // 允许通过拖动窗口来移动位置
       skipTaskbar: false,
       resizable: true,
       show: false,
@@ -285,9 +287,13 @@ class WindowManager {
       }),
     );
 
-    this.minibarWindow.once("ready-to-show", () => {
+    // 使用 webContents 的 did-finish-load 替代 ready-to-show，确保页面加载完成后显示窗口
+    this.minibarWindow.webContents.once("did-finish-load", () => {
       this.minibarWindow?.show();
       this.syncWindowState();
+
+      // 通知前端 Minibar 窗口已显示，前端应该折叠菜单
+      this.minibarWindow?.webContents.send("minibar-window-shown");
 
       if (process.env.NODE_ENV === "development") {
         this.minibarWindow?.webContents.openDevTools();
@@ -373,8 +379,9 @@ class WindowManager {
       }),
     );
 
-    this.mainWindow.once("ready-to-show", () => {
-      console.log("[WindowManager] Main window ready-to-show");
+    // 使用 webContents 的 did-finish-load 替代 ready-to-show，确保页面加载完成后显示窗口
+    this.mainWindow.webContents.once("did-finish-load", () => {
+      console.log("[WindowManager] Main window did-finish-load");
       console.log("[WindowManager] NODE_ENV:", process.env.NODE_ENV);
       console.log(
         "[WindowManager] is.dev:",

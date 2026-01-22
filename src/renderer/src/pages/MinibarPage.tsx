@@ -78,6 +78,26 @@ const MinibarPage: React.FC.FC = () => {
       electronMenu.onWindowStateChanged(handleStateChange);
     }
 
+    // 当 Minibar 窗口从隐藏状态恢复显示时，默认折叠菜单
+    React.useEffect(() => {
+      const electronMenu = (window as any).electronMenu;
+
+      const handleMinibarShown = () => {
+        console.log('MinibarPage: 窗口已显示，默认折叠菜单');
+        setIsExpanded(false);
+      };
+
+      if (electronMenu) {
+        electronMenu.onMinibarWindowShown(handleMinibarShown);
+      }
+
+      return () => {
+        if (electronMenu) {
+          electronMenu.removeAllListeners('minibar-window-shown');
+        }
+      };
+    }, []);
+
     return () => {
       if (electronMenu) {
         electronMenu.removeAllListeners('window-state-changed');

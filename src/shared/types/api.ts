@@ -175,24 +175,53 @@ export interface UserStatsData {
 }
 
 export interface ParsedResumeInfo {
+  // 基本信息
   name?: string;
   gender?: string;
+  birthYear?: string;          // 出生年月
   phone?: string;
   email?: string;
   address?: string;
+  expectedSalary?: string;     // 期望薪资
+  workYears?: string;          // 工作年限
+
+  // 技能
   skills: string[];
+  languages?: string[];        // 语言能力
+
+  // 教育背景
   education: Array<{
     school?: string;
     degree?: string;
     major?: string;
-    period?: string;
+    period?: string;              // 如 "2018.09 - 2022.06" 或 "2018年09月 - 至今"
   }>;
+
+  // 工作经历
   experience: Array<{
-    company?: string;
-    position?: string;
-    period?: string;
-    description?: string;
+    company?: string;            // 就职公司
+    position?: string;           // 岗位
+    period?: string;             // 时间范围
+    startDate?: string;          // 开始时间（标准化）
+    endDate?: string;            // 结束时间（标准化，"至今"或具体日期）
+    description?: string;        // 工作描述
   }>;
+
+  // 项目经验
+  projects?: Array<{
+    name?: string;              // 项目名称
+    role?: string;              // 担任角色
+    period?: string;             // 项目时间
+    description?: string;        // 项目描述
+    technologies?: string[];     // 使用技术
+  }>;
+
+  // 证书和荣誉
+  certifications?: string[];   // 证书
+  honors?: string[];           // 荣誉奖项
+
+  // 自我评价
+  selfAssessment?: string;     // 自我评价
 }
 
 export interface ResumeData {

@@ -101,8 +101,15 @@ const ResumeDetailPage: React.FC = () => {
       const status = await resumeApi.getResumeStatus(resume.id);
       setProcessingStatus(status);
 
-      if (status.status === 'completed') {
+      // 只有当状态从 processing 变为 completed 时才重新加载简历
+      // 如果 resume.status 已经是 completed，说明已经加载过，不需要再刷新
+      if (status.status === 'completed' && resume.status === 'processing') {
         await loadResume();
+        // 状态完成后清除轮询定时器
+        if (statusIntervalRef.current) {
+          clearInterval(statusIntervalRef.current);
+          statusIntervalRef.current = null;
+        }
       }
     } catch (error) {
       console.error('获取处理状态失败:', error);
@@ -223,12 +230,30 @@ const ResumeDetailPage: React.FC = () => {
     return '需改进';
   };
 
-  const parsedInfo: ParsedResumeInfo = resume.parsedInfo || (typeof resume.processedContent === 'string' ? {
+  // 确保 parsedInfo 总是有一个完整的 ParsedResumeInfo 对象
+  const defaultParsedInfo: ParsedResumeInfo = {
+    name: undefined,
+    gender: undefined,
+    birthYear: undefined,
+    phone: undefined,
+    email: undefined,
+    address: undefined,
+    expectedSalary: undefined,
+    workYears: undefined,
     skills: [],
+    languages: [],
     education: [],
     experience: [],
-    name: undefined,
-  } : { name: undefined });
+    projects: [],
+    certifications: [],
+    honors: [],
+    selfAssessment: undefined,
+  };
+
+  const parsedInfo: ParsedResumeInfo = {
+    ...defaultParsedInfo,
+    ...(resume.parsedInfo || {}),
+  };
 
   return (
     <div style={{ padding: 24 }}>
@@ -304,9 +329,14 @@ const ResumeDetailPage: React.FC = () => {
             <div style={{ marginBottom: 24, textAlign: 'center' }}>
               <Avatar size={80} icon={<UserOutlined />} style={{ marginBottom: 16 }} />
               <Title level={3}>{parsedInfo.name || '未填写'}</Title>
-              {parsedInfo.gender && (
-                <Tag color="blue" style={{ marginLeft: 8 }}>{parsedInfo.gender}</Tag>
-              )}
+              <Space style={{ marginTop: 8, justifyContent: 'center' }}>
+                {parsedInfo.gender && (
+                  <Tag color="blue">{parsedInfo.gender}</Tag>
+                )}
+                {parsedInfo.birthYear && (
+                  <Tag color="purple">出生年月: {parsedInfo.birthYear}</Tag>
+                )}
+              </Space>
             </div>
 
             <Divider />
@@ -326,6 +356,29 @@ const ResumeDetailPage: React.FC = () => {
               </Descriptions>
             </div>
 
+            {(parsedInfo.expectedSalary || parsedInfo.workYears) && (
+              <>
+                <Divider />
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}>基本信息</Title>
+                  <Space direction="vertical" style={{ width: '100%' }}>
+                    {parsedInfo.workYears && (
+                      <div>
+                        <Text type="secondary">工作年限：</Text>
+                        <Tag color="cyan" style={{ marginLeft: 8 }}>{parsedInfo.workYears}</Tag>
+                      </div>
+                    )}
+                    {parsedInfo.expectedSalary && (
+                      <div>
+                        <Text type="secondary">期望薪资：</Text>
+                        <Tag color="orange" style={{ marginLeft: 8 }}>{parsedInfo.expectedSalary}</Tag>
+                      </div>
+                    )}
+                  </Space>
+                </div>
+              </>
+            )}
+
             {parsedInfo.skills && parsedInfo.skills.length > 0 && (
               <>
                 <Divider />
@@ -342,6 +395,56 @@ const ResumeDetailPage: React.FC = () => {
               </>
             )}
 
+            {parsedInfo.languages && parsedInfo.languages.length > 0 && (
+              <>
+                <Divider />
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}>语言能力</Title>
+                  <div style={{ marginTop: 12 }}>
+                    {parsedInfo.languages.map((lang, index) => (
+                      <Tag key={index} color="purple" style={{ marginBottom: 8, marginRight: 8 }}>
+                        {lang}
+                      </Tag>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {parsedInfo.certifications && parsedInfo.certifications.length > 0 && (
+              <>
+                <Divider />
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}>证书</Title>
+                  <div style={{ marginTop: 12 }}>
+                    {parsedInfo.certifications.map((cert, index) => (
+                      <Tag key={index} color="gold" style={{ marginBottom: 8, marginRight: 8 }}>
+                        {cert}
+                      </Tag>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {parsedInfo.honors && parsedInfo.honors.length > 0 && (
+              <>
+                <Divider />
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}>荣誉奖项</Title>
+                  <List
+                    dataSource={parsedInfo.honors}
+                    renderItem={(honor, index) => (
+                      <List.Item key={index}>
+                        <TrophyOutlined style={{ color: '#faad14', marginRight: 8 }} />
+                        <span>{honor}</span>
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              </>
+            )}
+
             {parsedInfo.education && parsedInfo.education.length > 0 && (
               <>
                 <Divider />
@@ -352,11 +455,18 @@ const ResumeDetailPage: React.FC = () => {
                     renderItem={(edu, index) => (
                       <List.Item key={index}>
                         <List.Item.Meta
-                          title={edu.school ? (edu.school + ' ' + (edu.degree || '')) : (edu.degree || '')}
+                          title={
+                            <Space direction="vertical" size={0}>
+                              <Text strong>{edu.school || '未知学校'}</Text>
+                              {edu.degree && (
+                                <Text type="secondary">{edu.degree}</Text>
+                              )}
+                            </Space>
+                          }
                           description={
                             <Space direction="vertical" size={0}>
-                              {edu.major && <Text>{edu.major}</Text>}
-                              {edu.period && <Text type="secondary">{edu.period}</Text>}
+                              {edu.major && <Tag color="geekblue">{edu.major}</Tag>}
+                              {edu.period && <Text type="secondary" style={{ marginTop: 4 }}>{edu.period}</Text>}
                             </Space>
                           }
                         />
@@ -371,19 +481,36 @@ const ResumeDetailPage: React.FC = () => {
               <>
                 <Divider />
                 <div style={{ marginBottom: 24 }}>
-                  <Title level={4}><TeamOutlined /> 主要经历</Title>
+                  <Title level={4}><TeamOutlined /> 工作经历</Title>
                   <List
                     dataSource={parsedInfo.experience}
                     renderItem={(exp, index) => (
                       <List.Item key={index}>
                         <List.Item.Meta
-                          avatar={<TeamOutlined />}
-                          title={exp.company ? (exp.company + ' - ' + (exp.position || '')) : (exp.position || '')}
-                          description={
+                          avatar={<TeamOutlined style={{ color: '#1890ff' }} />}
+                          title={
                             <Space direction="vertical" size={0}>
-                              {exp.period && <Text type="secondary">{exp.period}</Text>}
-                              {exp.description && <Paragraph ellipsis={{ rows: 2 }}>{exp.description}</Paragraph>}
+                              <Text strong>
+                                {exp.company || '未知公司'}
+                                {exp.position && <Tag color="blue" style={{ marginLeft: 8 }}>{exp.position}</Tag>}
+                              </Text>
+                              {exp.period && (
+                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                  {exp.startDate && `开始: ${exp.startDate} `}
+                                  {exp.endDate && `结束: ${exp.endDate}`}
+                                </Text>
+                              )}
                             </Space>
+                          }
+                          description={
+                            exp.description && (
+                              <Paragraph
+                                ellipsis={{ rows: 3 }}
+                                style={{ marginTop: 8, color: '#666' }}
+                              >
+                                {exp.description}
+                              </Paragraph>
+                            )
                           }
                         />
                       </List.Item>
@@ -393,7 +520,79 @@ const ResumeDetailPage: React.FC = () => {
               </>
             )}
 
-            {!parsedInfo.name && !parsedInfo.skills && resume.processedContent && (
+            {parsedInfo.projects && parsedInfo.projects.length > 0 && (
+              <>
+                <Divider />
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}><RocketOutlined /> 项目经验</Title>
+                  <List
+                    dataSource={parsedInfo.projects}
+                    renderItem={(proj, index) => (
+                      <List.Item key={index}>
+                        <List.Item.Meta
+                          avatar={<RocketOutlined style={{ color: '#52c41a' }} />}
+                          title={
+                            <Space direction="vertical" size={0}>
+                              <Text strong>{proj.name || '未命名项目'}</Text>
+                              {proj.role && <Tag color="green" style={{ marginLeft: 8 }}>{proj.role}</Tag>}
+                              {proj.period && <Text type="secondary">{proj.period}</Text>}
+                            </Space>
+                          }
+                          description={
+                            <div>
+                              {proj.description && (
+                                <Paragraph
+                                  ellipsis={{ rows: 3 }}
+                                  style={{ marginTop: 8, color: '#666' }}
+                                >
+                                  {proj.description}
+                                </Paragraph>
+                              )}
+                              {proj.technologies && proj.technologies.length > 0 && (
+                                <div style={{ marginTop: 8 }}>
+                                  <Text type="secondary">使用技术：</Text>
+                                  <Space size={4} wrap>
+                                    {proj.technologies.map((tech, i) => (
+                                      <Tag key={i} color="geekblue" style={{ fontSize: '12px' }}>
+                                        {tech}
+                                      </Tag>
+                                    ))}
+                                  </Space>
+                                </div>
+                              )}
+                            </div>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              </>
+            )}
+
+            {parsedInfo.selfAssessment && (
+              <>
+                <Divider />
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}>自我评价</Title>
+                  <Paragraph
+                    style={{
+                      background: '#f0f9ff',
+                      padding: 16,
+                      borderRadius: 6,
+                      marginTop: 12,
+                      color: '#333',
+                    }}
+                  >
+                    {parsedInfo.selfAssessment}
+                  </Paragraph>
+                </div>
+              </>
+            )}
+
+            {(parsedInfo.name === undefined || parsedInfo.name === '') &&
+             (!parsedInfo.skills || parsedInfo.skills.length === 0) &&
+             resume.processedContent && (
               <>
                 <Divider />
                 <div>
