@@ -17,6 +17,8 @@ import type {
   ResumeGenerateQuestionsRequest,
   ResumeDeleteRequest,
   ResumeGetRequest,
+  ResumeExtractRequest,
+  ResumeExtractResponse,
 } from '@/shared/types';
 
 /**
@@ -154,6 +156,18 @@ export const resumeApi = {
     return invokeIPC<ResumeData>(
       IPC_CHANNELS.RESUME.UPDATE,
       { id, ...updates } as ResumeUpdateRequest
+    );
+  },
+
+  /**
+   * 提取简历信息（使用 AI 增强）
+   */
+  extractResumeInfo: async (
+    id: number
+  ): Promise<ResumeExtractResponse> => {
+    return invokeIPC<ResumeExtractResponse>(
+      IPC_CHANNELS.RESUME.EXTRACT,
+      { id } as ResumeExtractRequest
     );
   },
 };

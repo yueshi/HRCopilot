@@ -137,6 +137,16 @@ export interface ResumeDeleteRequest {
   id: number;
 }
 
+export interface ResumeExtractRequest {
+  id: number;
+}
+
+export interface ResumeExtractResponse {
+  id: number;
+  parsedInfo: any;
+  message?: string;
+}
+
 export interface FileParseRequest {
   filePath: string;
   mimeType: string;

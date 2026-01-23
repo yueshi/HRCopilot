@@ -19,6 +19,8 @@ import type {
   InterviewQuestionData,
   ResumeDeleteRequest,
   ResumeUpdateRequest,
+  ResumeExtractRequest,
+  ResumeExtractResponse,
   ApiResponse,
 } from '../../shared/types';
 import { database } from '../database/sqlite';
@@ -28,6 +30,7 @@ import { HashService } from '../services/hashService';
 import { DeduplicationService } from '../services/deduplicationService';
 import { VersionService } from '../services/versionService';
 import { aiAnalysisService } from '../services/aiAnalysis';
+import { resumeExtractionService } from '../services/resumeExtractionService';
 import { logger } from '../utils/logger';
 import fs from 'fs/promises';
 import path from 'path';
@@ -49,6 +52,7 @@ export class ResumeHandler extends BaseHandler {
     this.register(IPC_CHANNELS.RESUME.OPTIMIZE, this.optimize.bind(this));
     this.register(IPC_CHANNELS.RESUME.GET_STATUS, this.getStatus.bind(this));
     this.register(IPC_CHANNELS.RESUME.GENERATE_QUESTIONS, this.generateQuestions.bind(this));
+    this.register(IPC_CHANNELS.RESUME.EXTRACT, this.extract.bind(this));
   }
 
   private async upload(
@@ -223,7 +227,12 @@ export class ResumeHandler extends BaseHandler {
         );
       }
 
-      // 8. 获取完整的简历数据返回给前端
+      // 8. 自动触发 AI 信息抽取（异步，不阻塞上传）
+      if (resumeId) {
+        this.performAIExtractionAsync(Number(resumeId), parsedContent);
+      }
+
+      // 9. 获取完整的简历数据返回给前端
       const resume = await database.getResumeById(Number(resumeId));
       if (!resume) {
         throw new Error('简历创建后无法获取');
@@ -664,6 +673,43 @@ export class ResumeHandler extends BaseHandler {
     }, 100);
   }
 
+  /**
+   * 异步执行 AI 简历信息抽取（不阻塞上传流程）
+   */
+  private async performAIExtractionAsync(
+    resumeId: number,
+    content: string
+  ): Promise<void> {
+    setTimeout(async () => {
+      try {
+        logger.info(`开始 AI 简历信息抽取: ${resumeId}`);
+
+        // 使用 AI 增强的提取服务
+        const parsedInfo = await resumeExtractionService.extractResume(content, {
+          useAI: true,
+          fallbackToRegex: true,
+        });
+
+        // 更新数据库中的 parsed_info
+        const db = database.getDatabase();
+        db.prepare(
+          'UPDATE resumes SET parsed_info = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+        ).run(JSON.stringify(parsedInfo), resumeId);
+
+        logger.info(`简历 ${resumeId} AI 信息抽取完成`, {
+          name: parsedInfo.name,
+          email: parsedInfo.email,
+          phone: parsedInfo.phone,
+          skillsCount: parsedInfo.skills.length,
+          educationCount: parsedInfo.education.length,
+          experienceCount: parsedInfo.experience.length,
+        });
+      } catch (error: any) {
+        logger.error(`简历 ${resumeId} AI 信息抽取失败:`, error);
+      }
+    }, 500); // 延迟 500ms 执行，优先响应上传成功
+  }
+
   private calculateStatusData(status: string): ResumeStatusData {
     const steps = ['文件上传', '内容解析', 'AI分析', '生成报告'];
 
@@ -814,6 +860,73 @@ export class ResumeHandler extends BaseHandler {
       db.prepare(
         `UPDATE resumes SET ${fields.join(', ')} WHERE id = ?`
       ).run(...values);
+    }
+  }
+
+  private async extract(
+    event: IpcMainInvokeEvent,
+    request: ResumeExtractRequest
+  ): Promise<ApiResponse<ResumeExtractResponse>> {
+    const userId = this.getCurrentUserId(event);
+    logger.info(`用户 ${userId} 提取简历信息 ID: ${request.id}`);
+
+    try {
+      const resume = await database.getResumeById(request.id);
+
+      if (!resume || resume.user_id !== userId) {
+        return {
+          success: false,
+          error: '简历不存在或无权访问',
+          code: ErrorCode.RESUME_NOT_FOUND,
+        };
+      }
+
+      const content = resume.processed_content || '';
+      if (!content) {
+        return {
+          success: false,
+          error: '简历内容为空，无法提取信息',
+          code: ErrorCode.RESUME_PARSE_FAILED,
+        };
+      }
+
+      // 使用 AI 增强的提取服务
+      const parsedInfo = await resumeExtractionService.extractResume(content, {
+        useAI: true,
+        fallbackToRegex: true,
+      });
+
+      // 更新数据库中的 parsed_info信息
+      const db = database.getDatabase();
+      db.prepare(
+        'UPDATE resumes SET parsed_info = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      ).run(JSON.stringify(parsedInfo), request.id);
+
+      logger.info(`简历 ${request.id} 信息提取完成`, {
+        name: parsedInfo.name,
+        email: parsedInfo.email,
+        phone: parsedInfo.phone,
+        skillsCount: parsedInfo.skills.length,
+        educationCount: parsedInfo.education.length,
+        experienceCount: parsedInfo.experience.length,
+      });
+
+      return {
+        success: true,
+        data: {
+          id: request.id,
+          parsedInfo,
+          message: '简历信息提取成功',
+        },
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error: any) {
+      logger.error('提取简历信息失败:', error);
+      return {
+        success: false,
+        error: error.message || '提取简历信息失败',
+        code: ErrorCode.RESUME_PARSE_FAILED,
+      };
     }
   }
 }

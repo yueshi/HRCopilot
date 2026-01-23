@@ -50,6 +50,7 @@ const electronAPI: Record<string, any> = {
     optimize: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.RESUME.OPTIMIZE, request),
     getStatus: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.RESUME.GET_STATUS, request),
     generateQuestions: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.RESUME.GENERATE_QUESTIONS, request),
+    extract: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.RESUME.EXTRACT, request),
   },
 
   // User API

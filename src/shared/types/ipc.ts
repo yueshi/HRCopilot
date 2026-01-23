@@ -32,6 +32,7 @@ export const IPC_CHANNELS = {
     OPTIMIZE: "resume:optimize",
     GET_STATUS: "resume:get-status",
     GENERATE_QUESTIONS: "resume:generate-questions",
+    EXTRACT: "resume:extract",
   },
 
   // ============ 文件相关 ============

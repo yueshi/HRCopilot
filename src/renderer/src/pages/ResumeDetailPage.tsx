@@ -44,11 +44,14 @@ import {
   TrophyOutlined,
   CloseCircleOutlined,
   SyncOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { resumeApi } from '../services/resumeIpcService';
 import type { ResumeData, ResumeStatusData, ParsedResumeInfo } from '../../../shared/types';
 
-const { Title, Paragraph, Text } = Typography;
+const Title = Typography.Title;
+const Paragraph = Typography.Paragraph;
+const Text = Typography.Text;
 const { TextArea } = Input;
 
 const ResumeDetailPage: React.FC = () => {
@@ -59,6 +62,7 @@ const ResumeDetailPage: React.FC = () => {
   const [resume, setResume] = useState<ResumeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [optimizing, setOptimizing] = useState(false);
+  const [extracting, setExtracting] = useState(false);
   const [processingStatus, setProcessingStatus] = useState<ResumeStatusData | null>(null);
   const [optimizeModalVisible, setOptimizeModalVisible] = useState(false);
   const statusIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -160,6 +164,21 @@ const ResumeDetailPage: React.FC = () => {
       await loadResume();
     } catch (error) {
       message.error('更新失败，请重试');
+    }
+  };
+
+  const handleAIExtract = async () => {
+    if (!id || !resume) return;
+
+    try {
+      setExtracting(true);
+      const result = await resumeApi.extractResumeInfo(resume.id);
+      message.success('AI 信息抽取完成，请查看结果');
+      await loadResume(); // 重新加载简历以显示更新的解析信息
+    } catch (error) {
+      message.error('AI 信息抽取失败，请重试');
+    } finally {
+      setExtracting(false);
     }
   };
 
@@ -291,6 +310,15 @@ const ResumeDetailPage: React.FC = () => {
         </Col>
         <Col span={8} style={{ textAlign: 'right' }}>
           <Space>
+            <Button
+              type="primary"
+              icon={<RobotOutlined />}
+              onClick={handleAIExtract}
+              loading={extracting}
+              disabled={extracting}
+            >
+              AI 重新抽取
+            </Button>
             <Button
               type="primary"
               icon={<RocketOutlined />}
