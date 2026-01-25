@@ -22,7 +22,6 @@ import {
   Avatar,
   Badge,
   Alert,
-  Tabs,
 } from 'antd';
 import {
   HomeOutlined,
@@ -275,10 +274,6 @@ const ResumeDetailPage: React.FC = () => {
     ...(resume.parsedInfo || {}),
   };
 
-  const hasDetailInfo = parsedInfo.education.length > 0 ||
-    parsedInfo.experience.length > 0 ||
-    parsedInfo.projects.length > 0;
-
   return (
     <div style={{ padding: 24 }}>
       <Breadcrumb
@@ -478,145 +473,128 @@ const ResumeDetailPage: React.FC = () => {
               </>
             )}
 
-            {hasDetailInfo && (
+            {parsedInfo.education && parsedInfo.education.length > 0 && (
               <>
                 <Divider />
-                <Tabs
-                  defaultActiveKey="experience"
-                  items={[
-                    {
-                      key: 'experience',
-                      label: (
-                        <span>
-                          <TeamOutlined />
-                          工作经历
-                        </span>
-                      ),
-                      children: parsedInfo.experience.length > 0 ? (
-                        <List
-                          dataSource={parsedInfo.experience}
-                          renderItem={(exp, index) => (
-                            <List.Item key={index}>
-                              <List.Item.Meta
-                                avatar={<TeamOutlined style={{ color: '#1890ff' }} />}
-                                title={
-                                  <Space direction="vertical" size={0}>
-                                    <Text strong>
-                                      {exp.company || '未知公司'}
-                                      {exp.position && <Tag color="blue" style={{ marginLeft: 8 }}>{exp.position}</Tag>}
-                                    </Text>
-                                    {exp.period && (
-                                      <Text type="secondary" style={{ fontSize: '12px' }}>
-                                        {exp.startDate && `开始: ${exp.startDate} `}
-                                        {exp.endDate && `结束: ${exp.endDate}`}
-                                      </Text>
-                                    )}
-                                  </Space>
-                                }
-                                description={
-                                  exp.description && (
-                                    <Paragraph
-                                      ellipsis={{ rows: 3 }}
-                                      style={{ marginTop: 8, color: '#666' }}
-                                    >
-                                      {exp.description}
-                                    </Paragraph>
-                                  )
-                                }
-                              />
-                            </List.Item>
-                          )}
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}><BookOutlined /> 教育经历</Title>
+                  <List
+                    dataSource={parsedInfo.education}
+                    renderItem={(edu, index) => (
+                      <List.Item key={index}>
+                        <List.Item.Meta
+                          title={
+                            <Space direction="vertical" size={0}>
+                              <Text strong>{edu.school || '未知学校'}</Text>
+                              {edu.degree && (
+                                <Text type="secondary">{edu.degree}</Text>
+                              )}
+                            </Space>
+                          }
+                          description={
+                            <Space direction="vertical" size={0}>
+                              {edu.major && <Tag color="geekblue">{edu.major}</Tag>}
+                              {edu.period && <Text type="secondary" style={{ marginTop: 4 }}>{edu.period}</Text>}
+                            </Space>
+                          }
                         />
-                      ) : <Empty description="暂无工作经历" />,
-                    },
-                    {
-                      key: 'education',
-                      label: (
-                        <span>
-                          <BookOutlined />
-                          教育经历
-                        </span>
-                      ),
-                      children: parsedInfo.education.length > 0 ? (
-                        <List
-                          dataSource={parsedInfo.education}
-                          renderItem={(edu, index) => (
-                            <List.Item key={index}>
-                              <List.Item.Meta
-                                title={
-                                  <Space direction="vertical" size={0}>
-                                    <Text strong>{edu.school || '未知学校'}</Text>
-                                    {edu.degree && (
-                                      <Text type="secondary">{edu.degree}</Text>
-                                    )}
-                                  </Space>
-                                }
-                                description={
-                                  <Space direction="vertical" size={0}>
-                                    {edu.major && <Tag color="geekblue">{edu.major}</Tag>}
-                                    {edu.period && <Text type="secondary" style={{ marginTop: 4 }}>{edu.period}</Text>}
-                                  </Space>
-                                }
-                              />
-                            </List.Item>
-                          )}
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              </>
+            )}
+
+            {parsedInfo.experience && parsedInfo.experience.length > 0 && (
+              <>
+                <Divider />
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}><TeamOutlined /> 工作经历</Title>
+                  <List
+                    dataSource={parsedInfo.experience}
+                    renderItem={(exp, index) => (
+                      <List.Item key={index}>
+                        <List.Item.Meta
+                          avatar={<TeamOutlined style={{ color: '#1890ff' }} />}
+                          title={
+                            <Space direction="vertical" size={0}>
+                              <Text strong>
+                                {exp.company || '未知公司'}
+                                {exp.position && <Tag color="blue" style={{ marginLeft: 8 }}>{exp.position}</Tag>}
+                              </Text>
+                              {exp.period && (
+                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                  {exp.startDate && `开始: ${exp.startDate} `}
+                                  {exp.endDate && `结束: ${exp.endDate}`}
+                                </Text>
+                              )}
+                            </Space>
+                          }
+                          description={
+                            exp.description && (
+                              <Paragraph
+                                ellipsis={{ rows: 3 }}
+                                style={{ marginTop: 8, color: '#666' }}
+                              >
+                                {exp.description}
+                              </Paragraph>
+                            )
+                          }
                         />
-                      ) : <Empty description="暂无教育经历" />,
-                    },
-                    {
-                      key: 'projects',
-                      label: (
-                        <span>
-                          <RocketOutlined />
-                          项目经验
-                        </span>
-                      ),
-                      children: parsedInfo.projects.length > 0 ? (
-                        <List
-                          dataSource={parsedInfo.projects}
-                          renderItem={(proj, index) => (
-                            <List.Item key={index}>
-                              <List.Item.Meta
-                                avatar={<RocketOutlined style={{ color: '#52c41a' }} />}
-                                title={
-                                  <Space direction="vertical" size={0}>
-                                    <Text strong>{proj.name || '未命名项目'}</Text>
-                                    {proj.role && <Tag color="green" style={{ marginLeft: 8 }}>{proj.role}</Tag>}
-                                    {proj.period && <Text type="secondary">{proj.period}</Text>}
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              </>
+            )}
+
+            {parsedInfo.projects && parsedInfo.projects.length > 0 && (
+              <>
+                <Divider />
+                <div style={{ marginBottom: 24 }}>
+                  <Title level={4}><RocketOutlined /> 项目经验</Title>
+                  <List
+                    dataSource={parsedInfo.projects}
+                    renderItem={(proj, index) => (
+                      <List.Item key={index}>
+                        <List.Item.Meta
+                          avatar={<RocketOutlined style={{ color: '#52c41a' }} />}
+                          title={
+                            <Space direction="vertical" size={0}>
+                              <Text strong>{proj.name || '未命名项目'}</Text>
+                              {proj.role && <Tag color="green" style={{ marginLeft: 8 }}>{proj.role}</Tag>}
+                              {proj.period && <Text type="secondary">{proj.period}</Text>}
+                            </Space>
+                          }
+                          description={
+                            <div>
+                              {proj.description && (
+                                <Paragraph
+                                  ellipsis={{ rows: 3 }}
+                                  style={{ marginTop: 8, color: '#666' }}
+                                >
+                                  {proj.description}
+                                </Paragraph>
+                              )}
+                              {proj.technologies && proj.technologies.length > 0 && (
+                                <div style={{ marginTop: 8 }}>
+                                  <Text type="secondary">使用技术：</Text>
+                                  <Space size={4} wrap>
+                                    {proj.technologies.map((tech, i) => (
+                                      <Tag key={i} color="geekblue" style={{ fontSize: '12px' }}>
+                                        {tech}
+                                      </Tag>
+                                    ))}
                                   </Space>
-                                }
-                                description={
-                                  <div>
-                                    {proj.description && (
-                                      <Paragraph
-                                        ellipsis={{ rows: 3 }}
-                                        style={{ marginTop: 8, color: '#666' }}
-                                      >
-                                        {proj.description}
-                                      </Paragraph>
-                                    )}
-                                    {proj.technologies && proj.technologies.length > 0 && (
-                                      <div style={{ marginTop: 8 }}>
-                                        <Text type="secondary">使用技术：</Text>
-                                        <Space size={4} wrap>
-                                          {proj.technologies.map((tech, i) => (
-                                            <Tag key={i} color="geekblue" style={{ fontSize: '12px' }}>
-                                              {tech}
-                                            </Tag>
-                                          ))}
-                                        </Space>
-                                      </div>
-                                    )}
-                                  </div>
-                                }
-                              />
-                            </List.Item>
-                          )}
+                                </div>
+                              )}
+                            </div>
+                          }
                         />
-                      ) : <Empty description="暂无项目经验" />,
-                    },
-                  ]}
-                />
+                      </List.Item>
+                    )}
+                  />
+                </div>
               </>
             )}
 

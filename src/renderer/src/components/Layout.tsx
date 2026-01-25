@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Layout as AntLayout,
   Menu,
@@ -15,6 +15,8 @@ import {
   UserOutlined,
   SettingOutlined,
   MinusOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from "@ant-design/icons";
 import { WindowState as WindowStateEnum } from "@/shared/types/ipc";
 import { useAuthStore } from "../store/authStore";
@@ -25,6 +27,7 @@ const { Title } = Typography;
 const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [collapsed, setCollapsed] = useState(true);
 
   const menuItems = [
     { key: "/home", icon: <HomeOutlined />, label: "首页" },
@@ -95,9 +98,26 @@ const Layout: React.FC = () => {
           justifyContent: "space-between",
         }}
       >
-        <Title level={3} style={{ margin: 0, color: "#1890ff" }}>
-          HRCopilot
-        </Title>
+        <Space>
+          {collapsed ? (
+            <Button
+              type="text"
+              icon={<MenuUnfoldOutlined />}
+              onClick={() => setCollapsed(false)}
+              title="展开菜单"
+            />
+          ) : (
+            <Button
+              type="text"
+              icon={<MenuFoldOutlined />}
+              onClick={() => setCollapsed(true)}
+              title="收起菜单"
+            />
+          )}
+          <Title level={3} style={{ margin: 0, color: "#1890ff" }}>
+            HRCopilot
+          </Title>
+        </Space>
         <Space>
           <Button type="text" icon={<UserOutlined />} onClick={handleLogout}>
             退出
@@ -112,7 +132,14 @@ const Layout: React.FC = () => {
         </Space>
       </Header>
       <AntLayout>
-        <Sider width={200} style={{ background: "#fff" }}>
+        <Sider
+          collapsible
+          collapsed={collapsed}
+          collapsedWidth={60}
+          width={200}
+          style={{ background: "#fff", borderRight: "1px solid #f0f0f0" }}
+          trigger={null}
+        >
           <Menu
             mode="inline"
             selectedKeys={getSelectedKeys()}
