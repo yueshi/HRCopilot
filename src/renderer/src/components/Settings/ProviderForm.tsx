@@ -14,7 +14,12 @@ import {
 } from "antd";
 import { useSettingStore } from "../../store/settingStore";
 import { LLM_PROVIDER_PRESETS } from "@/shared/types/llm";
-import type { LLMProvider, LLMProviderCreateRequest, LLMProviderType } from "@/shared/types/llm";
+import type {
+  LLMProvider,
+  LLMProviderCreateRequest,
+  LLMProviderUpdateRequest,
+  LLMProviderType,
+} from "@/shared/types/llm";
 
 interface ProviderFormProps {
   provider: LLMProvider | null;
@@ -22,10 +27,16 @@ interface ProviderFormProps {
   onClose: () => void;
 }
 
-const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) => {
+const ProviderForm: React.FC<ProviderFormProps> = ({
+  provider,
+  open,
+  onClose,
+}) => {
   const [form] = Form.useForm<LLMProviderCreateRequest>();
   const { createProvider, updateProvider } = useSettingStore();
-  const [providerType, setProviderType] = useState<LLMProviderType | null>(null);
+  const [providerType, setProviderType] = useState<LLMProviderType | null>(
+    null,
+  );
 
   const isEdit = !!provider;
 
@@ -38,7 +49,9 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
           name: provider.name,
           type: provider.type,
           base_url: provider.base_url,
-          api_key: "",
+          // 编辑时清空 API Key，用户需要重新输入
+          // 这样避免在表单中显示脱敏的密钥
+          api_key: undefined,
           models: provider.models,
           is_enabled: provider.is_enabled,
           is_default: provider.is_default,
@@ -82,10 +95,33 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
       }
 
       if (isEdit && provider) {
-        await updateProvider(provider.provider_id, { ...values, provider_id: provider.provider_id });
+        const updateData: LLMProviderUpdateRequest = {
+          provider_id: provider.provider_id,
+          name: values.name,
+          type: values.type,
+          base_url: values.base_url,
+          models: values.models,
+          is_enabled: values.is_enabled,
+          is_default: values.is_default,
+          parameters: values.parameters,
+        };
+        if (values.api_key) {
+          updateData.api_key = values.api_key;
+        }
+        await updateProvider(provider.provider_id, updateData);
         message.success("供应商更新成功");
       } else {
-        await createProvider(values);
+        const createData: LLMProviderCreateRequest = {
+          name: values.name,
+          type: values.type,
+          base_url: values.base_url,
+          api_key: values.api_key,
+          models: values.models,
+          is_enabled: values.is_enabled,
+          is_default: values.is_default,
+          parameters: values.parameters,
+        };
+        await createProvider(createData);
         message.success("供应商创建成功");
       }
 
@@ -101,7 +137,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
   }));
 
   // Azure 供应商需要额外的 api_version 参数
-  const isAzure = providerType === 'azure';
+  const isAzure = providerType === "azure";
 
   return (
     <Modal
@@ -140,7 +176,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
             { required: true, message: "请输入 API 地址" },
             {
               type: "url",
-            message: "请输入有效的 URL",
+              message: "请输入有效的 URL",
             },
           ]}
         >
@@ -165,13 +201,21 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
               { label: "gpt-3.5-turbo", value: "gpt-3.5-turbo" },
               { label: "glm-4", value: "glm-4" },
               { label: "glm-4-flash", value: "glm-4-flash" },
-              { label: "claude-3-opus-20240229", value: "claude-3-opus-20240229" },
+              {
+                label: "claude-3-opus-20240229",
+                value: "claude-3-opus-20240229",
+              },
             ]}
             style={{ width: "100%" }}
           />
         </Form.Item>
 
-        <Form.Item label="启用供应商" name="is_enabled" valuePropName="checked" initialValue={true}>
+        <Form.Item
+          label="启用供应商"
+          name="is_enabled"
+          valuePropName="checked"
+          initialValue={true}
+        >
           <Switch />
         </Form.Item>
 
@@ -182,11 +226,14 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
         <Collapse
           items={[
             {
-              key: 'basic',
-              label: '基础参数',
+              key: "basic",
+              label: "基础参数",
               children: (
                 <>
-                  <Form.Item name={["parameters", "temperature"]} label="Temperature">
+                  <Form.Item
+                    name={["parameters", "temperature"]}
+                    label="Temperature"
+                  >
                     <Slider
                       min={0}
                       max={2}
@@ -202,7 +249,10 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
                     />
                   </Form.Item>
 
-                  <Form.Item name={["parameters", "max_tokens"]} label="Max Tokens">
+                  <Form.Item
+                    name={["parameters", "max_tokens"]}
+                    label="Max Tokens"
+                  >
                     <InputNumber
                       min={1}
                       max={100000}
@@ -210,7 +260,10 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
                     />
                   </Form.Item>
 
-                  <Form.Item name={["parameters", "timeout_ms"]} label="Timeout (ms)">
+                  <Form.Item
+                    name={["parameters", "timeout_ms"]}
+                    label="Timeout (ms)"
+                  >
                     <InputNumber
                       min={1000}
                       max={120000}
@@ -222,8 +275,8 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
               ),
             },
             {
-              key: 'advanced',
-              label: '高级参数',
+              key: "advanced",
+              label: "高级参数",
               children: (
                 <>
                   <Form.Item
@@ -296,7 +349,10 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
                     >
                       <Select
                         options={[
-                          { label: "2024-02-15-preview", value: "2024-02-15-preview" },
+                          {
+                            label: "2024-02-15-preview",
+                            value: "2024-02-15-preview",
+                          },
                           { label: "2024-02-01", value: "2024-02-01" },
                           { label: "2023-05-15", value: "2023-05-15" },
                         ]}
@@ -307,7 +363,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({ provider, open, onClose }) 
               ),
             },
           ]}
-          defaultActiveKey={['basic']}
+          defaultActiveKey={["basic"]}
         />
       </Form>
     </Modal>

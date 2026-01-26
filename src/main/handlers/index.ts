@@ -6,6 +6,7 @@ import { DatabaseHandler } from './databaseHandler';
 import { DeduplicationHandler } from './deduplicationHandler';
 import { VersionHandler } from './versionHandler';
 import { registerWindowHandlers } from './windowHandler';
+import { StorageHandler } from './storageHandler';
 import { logger } from '../utils/logger';
 
 /**
@@ -48,6 +49,10 @@ export function registerAllHandlers(): void {
     // 注册窗口管理相关处理器
     registerWindowHandlers();
     logger.info('窗口管理 IPC 处理器已注册');
+
+    // 注册持久化存储相关处理器
+    new StorageHandler();
+    logger.info('持久化存储 IPC 处理器已注册');
 
     logger.info('所有 IPC 处理器注册完成');
   } catch (error) {

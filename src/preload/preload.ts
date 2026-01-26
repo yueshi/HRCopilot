@@ -109,6 +109,14 @@ const electronAPI: Record<string, any> = {
     clearHistory: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.AI_HR_ASSISTANT.CLEAR_HISTORY, request),
     generateSuggestion: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.AI_HR_ASSISTANT.GENERATE_SUGGESTION, request),
   },
+
+  // 持久化存储 API - 通过 IPC 调用主进程的 session storage
+  // 通道格式: 'storage' + 操作类型 + key (+ value for set)
+  storage: {
+    getItem: (key: string) => ipcRenderer.invoke('storage', 'get', key),
+    setItem: (key: string, value: string) => ipcRenderer.invoke('storage', 'set', key, value),
+    removeItem: (key: string) => ipcRenderer.invoke('storage', 'remove', key),
+  },
 };
 
 contextBridge.exposeInMainWorld('electronMenu', {
@@ -158,6 +166,7 @@ contextBridge.exposeInMainWorld('electronMenu', {
     ipcRenderer.removeAllListeners('ai-hr-assistant:stream-end');
     ipcRenderer.removeAllListeners('ai-hr-assistant:stream-error');
   },
+  ipcRenderer: ipcRenderer, // 暴露 ipcRenderer 用于直接调用
 });
 
 (contextBridge as any).exposeInMainWorld('electronAPI', electronAPI);

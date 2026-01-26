@@ -29,20 +29,32 @@ const ProviderChatModal: React.FC<ProviderChatModalProps> = ({
     if (!input.trim() || !provider) return;
 
     const userMessage = input.trim();
+    const selectedModel =
+      provider.models && provider.models.length > 0
+        ? provider.models[0]
+        : undefined;
+    if (!selectedModel) {
+      message.error("请先配置模型");
+      return;
+    }
+
     setInput("");
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setMessages((prev) => [
+      ...(prev || []),
+      { role: "user", content: userMessage },
+    ]);
     setLoading(true);
 
     try {
       const result = await chat({
         providerId: provider.provider_id,
         message: userMessage,
-        model: provider.models[0],
+        model: selectedModel,
       });
 
       // result 是字符串，直接使用
       setMessages((prev) => [
-        ...prev,
+        ...(prev || []),
         { role: "assistant", content: result },
       ]);
     } catch (error) {

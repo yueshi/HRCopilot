@@ -55,15 +55,25 @@ const ProviderList: React.FC = () => {
     clearError,
   } = useSettingStore();
 
+  console.log("[ProviderList] 渲染:", {
+    providers,
+    providersLoading,
+    providersError,
+    providerCount: providers?.length,
+  });
+
   const [showModal, setShowModal] = useState(false);
-  const [editingProvider, setEditingProvider] = useState<LLMProvider | null>(null);
+  const [editingProvider, setEditingProvider] = useState<LLMProvider | null>(
+    null,
+  );
   const [testingIds, setTestingSet] = useState<Set<string>>(new Set());
   const [chatProvider, setChatProvider] = useState<LLMProvider | null>(null);
 
   // 使用 once 模式确保 fetchProviders 只在组件挂载时调用一次
   useEffect(() => {
+    console.log("[ProviderList] 组件挂载，调用 fetchProviders");
     useSettingStore.getState().fetchProviders();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleDelete = async (provider: LLMProvider) => {
     try {
@@ -84,7 +94,11 @@ const ProviderList: React.FC = () => {
   };
 
   const handleTest = async (provider: LLMProvider) => {
-    setTestingSet((prev) => new Set(prev).add(provider.provider_id));
+    setTestingSet((prev) => {
+      const next = new Set(prev);
+      next.add(provider.provider_id);
+      return next;
+    });
 
     try {
       const result = await testProvider(provider.provider_id);
@@ -127,7 +141,13 @@ const ProviderList: React.FC = () => {
           description={providersError}
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         >
-          <Button type="primary" onClick={() => { clearError(); fetchProviders(); }}>
+          <Button
+            type="primary"
+            onClick={() => {
+              clearError();
+              fetchProviders();
+            }}
+          >
             重试
           </Button>
         </Empty>
@@ -137,7 +157,13 @@ const ProviderList: React.FC = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
+      >
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           添加供应商
         </Button>
@@ -145,7 +171,7 @@ const ProviderList: React.FC = () => {
 
       <Spin spinning={providersLoading}>
         <List
-          dataSource={providers}
+          dataSource={Array.isArray(providers) ? providers : []}
           renderItem={(provider) => (
             <Card
               key={provider.provider_id}
@@ -191,11 +217,7 @@ const ProviderList: React.FC = () => {
                     okText="确定"
                     cancelText="取消"
                   >
-                    <Button
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                    >
+                    <Button size="small" danger icon={<DeleteOutlined />}>
                       删除
                     </Button>
                   </Popconfirm>
@@ -204,7 +226,9 @@ const ProviderList: React.FC = () => {
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>
+                  <div
+                    style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}
+                  >
                     {provider.name}
                   </div>
                   <div style={{ color: "#666", fontSize: 12 }}>
@@ -234,7 +258,8 @@ const ProviderList: React.FC = () => {
                   <strong>可用模型：</strong>
                 </div>
                 <Space wrap>
-                  {provider.models.length > 0 ? (
+                  {Array.isArray(provider.models) &&
+                  provider.models.length > 0 ? (
                     provider.models.map((model) => (
                       <Tag key={model} style={{ marginBottom: 4 }}>
                         {model}

@@ -3,7 +3,12 @@ import { app } from "electron";
 import path from "path";
 import fs from "fs";
 import { logger } from "../utils/logger";
-import { encrypt, decrypt, maskApiKey, isValidEncryptedData } from "../utils/encryption";
+import {
+  encrypt,
+  decrypt,
+  maskApiKey,
+  isValidEncryptedData,
+} from "../utils/encryption";
 import { v4 as uuidv4 } from "uuid";
 import type {
   LLMProvider,
@@ -161,9 +166,9 @@ export class DatabaseService {
     }
 
     // 获取 resumes 表的列信息
-    const columns = this.db
-      .prepare("PRAGMA table_info(resumes)")
-      .all() as { name: string }[];
+    const columns = this.db.prepare("PRAGMA table_info(resumes)").all() as {
+      name: string;
+    }[];
     const columnNames = new Set(columns.map((c) => c.name));
 
     // 要添加的列定义
@@ -391,7 +396,8 @@ export class DatabaseService {
 
       // 从环境变量读取 GLM 配置
       const glmApiKey = process.env.GLM_API_KEY;
-      const glmApiUrl = process.env.GLM_API_URL || "https://open.bigmodel.cn/api/paas/v4";
+      const glmApiUrl =
+        process.env.GLM_API_URL || "https://open.bigmodel.cn/api/paas/v4";
 
       if (glmApiKey) {
         logger.info("从环境变量初始化 GLM 供应商配置");
@@ -399,12 +405,14 @@ export class DatabaseService {
         const providerId = uuidv4();
         const encryptedApiKey = encrypt(glmApiKey);
 
-        db.prepare(`
+        db.prepare(
+          `
           INSERT INTO llm_providers (
             provider_id, name, type, base_url, api_key, models,
             is_enabled, is_default, parameters, sort_order
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `).run(
+        `,
+        ).run(
           providerId,
           "GLM (智谱 AI)",
           "glm",
@@ -422,12 +430,18 @@ export class DatabaseService {
         );
 
         // 创建任务配置
-        const tasks = ["resume_analysis", "resume_optimization", "question_generation"];
+        const tasks = [
+          "resume_analysis",
+          "resume_optimization",
+          "question_generation",
+        ];
         for (const task of tasks) {
-          db.prepare(`
+          db.prepare(
+            `
             INSERT INTO llm_task_config (task_name, provider_id, model, parameters)
             VALUES (?, ?, ?, ?)
-          `).run(
+          `,
+          ).run(
             task,
             providerId,
             "glm-4",
@@ -833,18 +847,23 @@ export class DatabaseService {
     }
 
     // 获取当前最大排序序号
-    const maxSortOrder = (
-      db.prepare("SELECT MAX(sort_order) as max_sort FROM llm_providers").get() as {
-        max_sort: number | null;
-      }
-    ).max_sort || 0;
+    const maxSortOrder =
+      (
+        db
+          .prepare("SELECT MAX(sort_order) as max_sort FROM llm_providers")
+          .get() as {
+          max_sort: number | null;
+        }
+      ).max_sort || 0;
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO llm_providers (
         provider_id, name, type, base_url, api_key, models,
         is_enabled, is_default, parameters, sort_order
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `,
+    ).run(
       providerId,
       data.name,
       data.type,
@@ -857,7 +876,11 @@ export class DatabaseService {
       maxSortOrder + 1,
     );
 
-    return (await this.getLLMProvider(providerId))!;
+    const provider = await this.getLLMProvider(providerId);
+    if (!provider) {
+      throw new Error("创建供应商后无法获取");
+    }
+    return provider;
   }
 
   /**
@@ -981,7 +1004,11 @@ export class DatabaseService {
       ).run(...values);
     }
 
-    return (await this.getLLMProvider(providerId))!;
+    const provider = await this.getLLMProvider(providerId);
+    if (!provider) {
+      throw new Error("更新供应商后无法获取");
+    }
+    return provider;
   }
 
   /**
@@ -989,7 +1016,9 @@ export class DatabaseService {
    */
   async deleteLLMProvider(providerId: string): Promise<void> {
     const db = this.getDatabase();
-    db.prepare("DELETE FROM llm_providers WHERE provider_id = ?").run(providerId);
+    db.prepare("DELETE FROM llm_providers WHERE provider_id = ?").run(
+      providerId,
+    );
   }
 
   /**
@@ -1002,9 +1031,9 @@ export class DatabaseService {
     db.prepare("UPDATE llm_providers SET is_default = 0").run();
 
     // 设置新的默认供应商
-    db
-      .prepare("UPDATE llm_providers SET is_default = 1 WHERE provider_id = ?")
-      .run(providerId);
+    db.prepare(
+      "UPDATE llm_providers SET is_default = 1 WHERE provider_id = ?",
+    ).run(providerId);
   }
 
   /**
@@ -1138,7 +1167,8 @@ export class DatabaseService {
   async updateLLMTaskConfig(config: LLMTaskConfig): Promise<void> {
     const db = this.getDatabase();
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO llm_task_config (task_name, provider_id, model, parameters)
       VALUES (?, ?, ?, ?)
       ON CONFLICT(task_name) DO UPDATE SET
@@ -1146,7 +1176,8 @@ export class DatabaseService {
         model = excluded.model,
         parameters = excluded.parameters,
         updated_at = CURRENT_TIMESTAMP
-    `).run(
+    `,
+    ).run(
       config.task_name,
       config.provider_id || null,
       config.model || null,
@@ -1188,12 +1219,14 @@ export class DatabaseService {
   }): Promise<void> {
     const db = this.getDatabase();
 
-    db.prepare(`
+    db.prepare(
+      `
       INSERT INTO llm_call_logs (
         provider_id, model, task_name, request_tokens, response_tokens,
         status, error_message, duration_ms
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `,
+    ).run(
       data.provider_id,
       data.model,
       data.task_name || null,
@@ -1211,10 +1244,14 @@ export class DatabaseService {
   async cleanupLLMCallLogs(daysToKeep: number = 30): Promise<number> {
     const db = this.getDatabase();
 
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
       DELETE FROM llm_call_logs
       WHERE created_at < datetime('now', '-' || ? || ' days')
-    `).run(daysToKeep);
+    `,
+      )
+      .run(daysToKeep);
 
     return result.changes;
   }
@@ -1227,30 +1264,34 @@ export class DatabaseService {
   async insertConversation(data: {
     resumeId: number;
     userId: number;
-    role: 'user' | 'assistant' | 'system';
+    role: "user" | "assistant" | "system";
     content: string;
-    messageType?: 'chat' | 'suggestion' | 'analysis';
+    messageType?: "chat" | "suggestion" | "analysis";
     metadata?: any;
     tokenCount?: number;
     isSummary?: boolean;
   }): Promise<number> {
     const db = this.getDatabase();
 
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
       INSERT INTO ai_conversations (
         resume_id, user_id, role, content, message_type,
         metadata, token_count, is_summary
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      data.resumeId,
-      data.userId,
-      data.role,
-      data.content,
-      data.messageType || 'chat',
-      data.metadata ? JSON.stringify(data.metadata) : null,
-      data.tokenCount || 0,
-      data.isSummary ? 1 : 0,
-    );
+    `,
+      )
+      .run(
+        data.resumeId,
+        data.userId,
+        data.role,
+        data.content,
+        data.messageType || "chat",
+        data.metadata ? JSON.stringify(data.metadata) : null,
+        data.tokenCount || 0,
+        data.isSummary ? 1 : 0,
+      );
 
     return result.lastInsertRowid as number;
   }
@@ -1268,12 +1309,16 @@ export class DatabaseService {
     const limit = params.limit || 50;
     const offset = params.offset || 0;
 
-    const rows = db.prepare(`
+    const rows = db
+      .prepare(
+        `
       SELECT * FROM ai_conversations
       WHERE resume_id = ? AND user_id = ?
       ORDER BY created_at ASC
       LIMIT ? OFFSET ?
-    `).all(params.resumeId, params.userId, limit, offset) as any[];
+    `,
+      )
+      .all(params.resumeId, params.userId, limit, offset) as any[];
 
     return rows.map((row) => ({
       id: row.id,
@@ -1299,12 +1344,16 @@ export class DatabaseService {
   }): Promise<any[]> {
     const db = this.getDatabase();
 
-    const rows = db.prepare(`
+    const rows = db
+      .prepare(
+        `
       SELECT * FROM ai_conversations
       WHERE resume_id = ? AND user_id = ? AND message_type = 'chat' AND is_summary = 0
       ORDER BY created_at DESC
       LIMIT ?
-    `).all(params.resumeId, params.userId, params.count) as any[];
+    `,
+      )
+      .all(params.resumeId, params.userId, params.count) as any[];
 
     // 返回按时间正序排列的结果
     return rows.reverse().map((row) => ({
@@ -1322,10 +1371,14 @@ export class DatabaseService {
   }): Promise<number> {
     const db = this.getDatabase();
 
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
       DELETE FROM ai_conversations
       WHERE resume_id = ? AND user_id = ?
-    `).run(params.resumeId, params.userId);
+    `,
+      )
+      .run(params.resumeId, params.userId);
 
     return result.changes;
   }
@@ -1347,10 +1400,14 @@ export class DatabaseService {
   }): Promise<number> {
     const db = this.getDatabase();
 
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
       SELECT COUNT(*) as count FROM ai_conversations
       WHERE resume_id = ? AND user_id = ?
-    `).get(params.resumeId, params.userId) as { count: number };
+    `,
+      )
+      .get(params.resumeId, params.userId) as { count: number };
 
     return result.count;
   }
@@ -1368,15 +1425,27 @@ export class DatabaseService {
   }): Promise<number> {
     const db = this.getDatabase();
 
-    const result = db.prepare(`
+    const result = db
+      .prepare(
+        `
       INSERT INTO resume_groups (user_id, group_name, primary_resume_id, description)
       VALUES (?, ?, ?, ?)
-    `).run(data.userId, data.groupName, data.primaryResumeId, data.description || null);
+    `,
+      )
+      .run(
+        data.userId,
+        data.groupName,
+        data.primaryResumeId,
+        data.description || null,
+      );
 
     const groupId = result.lastInsertRowid as number;
 
     // 更新主简历的 group_id
-    db.prepare(`UPDATE resumes SET group_id = ? WHERE id = ?`).run(groupId, data.primaryResumeId);
+    db.prepare(`UPDATE resumes SET group_id = ? WHERE id = ?`).run(
+      groupId,
+      data.primaryResumeId,
+    );
 
     return groupId;
   }
@@ -1386,7 +1455,9 @@ export class DatabaseService {
    */
   async getResumeGroup(groupId: number): Promise<any | null> {
     const db = this.getDatabase();
-    const row = db.prepare(`SELECT * FROM resume_groups WHERE id = ?`).get(groupId) as any;
+    const row = db
+      .prepare(`SELECT * FROM resume_groups WHERE id = ?`)
+      .get(groupId) as any;
 
     if (!row) {
       return null;
@@ -1408,9 +1479,13 @@ export class DatabaseService {
    */
   async getResumeGroupsByUserId(userId: number): Promise<any[]> {
     const db = this.getDatabase();
-    const rows = db.prepare(`
+    const rows = db
+      .prepare(
+        `
       SELECT * FROM resume_groups WHERE user_id = ? ORDER BY created_at DESC
-    `).all(userId) as any[];
+    `,
+      )
+      .all(userId) as any[];
 
     return rows.map((row) => ({
       id: row.id,
@@ -1428,9 +1503,13 @@ export class DatabaseService {
    */
   async getResumesInGroup(groupId: number): Promise<any[]> {
     const db = this.getDatabase();
-    const rows = db.prepare(`
+    const rows = db
+      .prepare(
+        `
       SELECT * FROM resumes WHERE group_id = ? ORDER BY created_at ASC
-    `).all(groupId) as any[];
+    `,
+      )
+      .all(groupId) as any[];
 
     return rows.map((row) => ({
       id: row.id,
@@ -1463,23 +1542,25 @@ export class DatabaseService {
   }): Promise<void> {
     const db = this.getDatabase();
 
-    const fields: string[] = ['group_id = ?'];
+    const fields: string[] = ["group_id = ?"];
     const values: any[] = [data.groupId];
 
     if (data.versionLabel !== undefined) {
-      fields.push('version_label = ?');
+      fields.push("version_label = ?");
       values.push(data.versionLabel);
     }
 
     if (data.versionNotes !== undefined) {
-      fields.push('version_notes = ?');
+      fields.push("version_notes = ?");
       values.push(data.versionNotes);
     }
 
-    fields.push('updated_at = CURRENT_TIMESTAMP');
+    fields.push("updated_at = CURRENT_TIMESTAMP");
     values.push(data.resumeId);
 
-    db.prepare(`UPDATE resumes SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    db.prepare(`UPDATE resumes SET ${fields.join(", ")} WHERE id = ?`).run(
+      ...values,
+    );
   }
 
   /**
@@ -1491,25 +1572,37 @@ export class DatabaseService {
     // 使用事务更新
     db.transaction(() => {
       // 将组内所有简历的 is_primary 设为 0
-      db.prepare(`UPDATE resumes SET is_primary = 0 WHERE group_id = ?`).run(groupId);
+      db.prepare(`UPDATE resumes SET is_primary = 0 WHERE group_id = ?`).run(
+        groupId,
+      );
 
       // 将指定简历设为主版本
-      db.prepare(`UPDATE resumes SET is_primary = 1 WHERE id = ?`).run(resumeId);
+      db.prepare(`UPDATE resumes SET is_primary = 1 WHERE id = ?`).run(
+        resumeId,
+      );
 
       // 更新组的 primary_resume_id
-      db.prepare(`UPDATE resume_groups SET primary_resume_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`).run(resumeId, groupId);
+      db.prepare(
+        `UPDATE resume_groups SET primary_resume_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+      ).run(resumeId, groupId);
     })();
   }
 
   /**
    * 合并两个简历组
    */
-  async mergeResumeGroups(sourceGroupId: number, targetGroupId: number): Promise<void> {
+  async mergeResumeGroups(
+    sourceGroupId: number,
+    targetGroupId: number,
+  ): Promise<void> {
     const db = this.getDatabase();
 
     db.transaction(() => {
       // 将源组内的简历移动到目标组
-      db.prepare(`UPDATE resumes SET group_id = ? WHERE group_id = ?`).run(targetGroupId, sourceGroupId);
+      db.prepare(`UPDATE resumes SET group_id = ? WHERE group_id = ?`).run(
+        targetGroupId,
+        sourceGroupId,
+      );
 
       // 删除源组
       db.prepare(`DELETE FROM resume_groups WHERE id = ?`).run(sourceGroupId);
@@ -1519,7 +1612,10 @@ export class DatabaseService {
   /**
    * 删除简历组
    */
-  async deleteResumeGroup(groupId: number, deleteResumes: boolean = false): Promise<void> {
+  async deleteResumeGroup(
+    groupId: number,
+    deleteResumes: boolean = false,
+  ): Promise<void> {
     const db = this.getDatabase();
 
     db.transaction(() => {
@@ -1528,7 +1624,9 @@ export class DatabaseService {
         db.prepare(`DELETE FROM resumes WHERE group_id = ?`).run(groupId);
       } else {
         // 将简历的 group_id 设为 null
-        db.prepare(`UPDATE resumes SET group_id = NULL, is_primary = 0 WHERE group_id = ?`).run(groupId);
+        db.prepare(
+          `UPDATE resumes SET group_id = NULL, is_primary = 0 WHERE group_id = ?`,
+        ).run(groupId);
       }
 
       // 删除组
@@ -1539,29 +1637,34 @@ export class DatabaseService {
   /**
    * 更新简历组
    */
-  async updateResumeGroup(groupId: number, data: {
-    groupName?: string;
-    description?: string;
-  }): Promise<void> {
+  async updateResumeGroup(
+    groupId: number,
+    data: {
+      groupName?: string;
+      description?: string;
+    },
+  ): Promise<void> {
     const db = this.getDatabase();
 
     const fields: string[] = [];
     const values: any[] = [];
 
     if (data.groupName !== undefined) {
-      fields.push('group_name = ?');
+      fields.push("group_name = ?");
       values.push(data.groupName);
     }
 
     if (data.description !== undefined) {
-      fields.push('description = ?');
+      fields.push("description = ?");
       values.push(data.description);
     }
 
     if (fields.length > 0) {
-      fields.push('updated_at = CURRENT_TIMESTAMP');
+      fields.push("updated_at = CURRENT_TIMESTAMP");
       values.push(groupId);
-      db.prepare(`UPDATE resume_groups SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+      db.prepare(
+        `UPDATE resume_groups SET ${fields.join(", ")} WHERE id = ?`,
+      ).run(...values);
     }
   }
 
@@ -1570,7 +1673,9 @@ export class DatabaseService {
    */
   async isResumeOwner(userId: number, resumeId: number): Promise<boolean> {
     const db = this.getDatabase();
-    const result = db.prepare(`SELECT id FROM resumes WHERE id = ? AND user_id = ?`).get(resumeId, userId) as any;
+    const result = db
+      .prepare(`SELECT id FROM resumes WHERE id = ? AND user_id = ?`)
+      .get(resumeId, userId) as any;
     return result !== undefined;
   }
 
@@ -1579,7 +1684,9 @@ export class DatabaseService {
    */
   async isResumeGroupOwner(userId: number, groupId: number): Promise<boolean> {
     const db = this.getDatabase();
-    const result = db.prepare(`SELECT id FROM resume_groups WHERE id = ? AND user_id = ?`).get(groupId, userId) as any;
+    const result = db
+      .prepare(`SELECT id FROM resume_groups WHERE id = ? AND user_id = ?`)
+      .get(groupId, userId) as any;
     return result !== undefined;
   }
 }

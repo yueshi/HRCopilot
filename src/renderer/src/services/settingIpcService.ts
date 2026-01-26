@@ -1,6 +1,7 @@
 import { invokeIPC } from "./ipcApi";
 import { IPC_CHANNELS } from "../../../shared/types";
 import type {
+  ApiResponse,
   LLMProvider,
   LLMProviderCreateRequest,
   LLMProviderUpdateRequest,
@@ -9,7 +10,7 @@ import type {
   LLMModelsSyncRequest,
   LLMModelsSyncResult,
   LLMTaskConfig,
-} from "../../../shared/types/llm";
+} from "../../../shared/types";
 
 /**
  * 设置 IPC 服务
@@ -22,17 +23,30 @@ export const settingApi = {
    * 列出所有供应商
    */
   listProviders: async (): Promise<LLMProvider[]> => {
-    return invokeIPC<LLMProvider[]>(IPC_CHANNELS.SETTING.PROVIDER_LIST);
+    const response = await invokeIPC<ApiResponse<LLMProvider[]>>(
+      IPC_CHANNELS.SETTING.PROVIDER_LIST,
+    );
+    console.log("[settingApi] listProviders 原始响应:", response);
+    if (response && response.success && response.data) {
+      console.log("[settingApi] listProviders 解包后数据:", response.data);
+      return response.data;
+    }
+    console.error("[settingApi] listProviders 响应格式错误:", response);
+    throw new Error("获取供应商列表失败");
   },
 
   /**
    * 获取单个供应商
    */
   getProvider: async (providerId: string): Promise<LLMProvider | null> => {
-    return invokeIPC<LLMProvider | null>(
+    const response = await invokeIPC<ApiResponse<LLMProvider | null>>(
       IPC_CHANNELS.SETTING.PROVIDER_GET,
       providerId,
     );
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+    return null;
   },
 
   /**
@@ -41,7 +55,14 @@ export const settingApi = {
   createProvider: async (
     data: LLMProviderCreateRequest,
   ): Promise<LLMProvider> => {
-    return invokeIPC<LLMProvider>(IPC_CHANNELS.SETTING.PROVIDER_CREATE, data);
+    const response = await invokeIPC<ApiResponse<LLMProvider>>(
+      IPC_CHANNELS.SETTING.PROVIDER_CREATE,
+      data,
+    );
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+    throw new Error("创建供应商失败");
   },
 
   /**
@@ -51,11 +72,15 @@ export const settingApi = {
     providerId: string,
     data: LLMProviderUpdateRequest,
   ): Promise<LLMProvider | null> => {
-    return invokeIPC<LLMProvider | null>(
+    const response = await invokeIPC<ApiResponse<LLMProvider | null>>(
       IPC_CHANNELS.SETTING.PROVIDER_UPDATE,
       providerId,
       data,
     );
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+    return null;
   },
 
   /**
@@ -71,7 +96,7 @@ export const settingApi = {
   testProvider: async (
     request: LLMProviderTestRequest,
   ): Promise<LLMProviderTestResult> => {
-    return invokeIPC<LLMProviderTestResult>(
+    return await invokeIPC<LLMProviderTestResult>(
       IPC_CHANNELS.SETTING.PROVIDER_TEST,
       request,
     );
@@ -91,9 +116,13 @@ export const settingApi = {
    * 获取默认供应商
    */
   getDefaultProvider: async (): Promise<LLMProvider | null> => {
-    return invokeIPC<LLMProvider | null>(
+    const response = await invokeIPC<ApiResponse<LLMProvider | null>>(
       IPC_CHANNELS.SETTING.PROVIDER_GET_DEFAULT,
     );
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+    return null;
   },
 
   /**
@@ -105,7 +134,22 @@ export const settingApi = {
     message: string;
     model?: string;
   }): Promise<string> => {
-    return invokeIPC<string>(IPC_CHANNELS.SETTING.PROVIDER_CHAT, request);
+    console.log("[settingApi] chat 调用:", request);
+    const response = await invokeIPC<{
+      success: boolean;
+      data?: string;
+      error?: string;
+    }>(IPC_CHANNELS.SETTING.PROVIDER_CHAT, request);
+
+    console.log("[settingApi] chat 响应:", response);
+
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+
+    const errorMsg = response?.error || "聊天失败";
+    console.error("[settingApi] chat 失败:", errorMsg);
+    throw new Error(errorMsg);
   },
 
   // ============ 任务配置相关 ============
@@ -114,24 +158,44 @@ export const settingApi = {
    * 获取任务配置
    */
   getTaskConfig: async (taskName: string): Promise<LLMTaskConfig | null> => {
-    return invokeIPC<LLMTaskConfig | null>(
+    const response = await invokeIPC<ApiResponse<LLMTaskConfig | null>>(
       IPC_CHANNELS.SETTING.TASK_CONFIG_GET,
       taskName,
     );
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+    return null;
   },
 
   /**
    * 列出所有任务配置
    */
   listTaskConfigs: async (): Promise<LLMTaskConfig[]> => {
-    return invokeIPC<LLMTaskConfig[]>(IPC_CHANNELS.SETTING.TASK_CONFIG_LIST);
+    const response = await invokeIPC<ApiResponse<LLMTaskConfig[]>>(
+      IPC_CHANNELS.SETTING.TASK_CONFIG_LIST,
+    );
+    console.log("[settingApi] listTaskConfigs 原始响应:", response);
+    if (response && response.success && response.data) {
+      console.log("[settingApi] listTaskConfigs 解包后数据:", response.data);
+      return response.data;
+    }
+    console.error("[settingApi] listTaskConfigs 响应格式错误:", response);
+    throw new Error("获取任务配置失败");
   },
 
   /**
    * 更新任务配置
    */
   updateTaskConfig: async (config: LLMTaskConfig): Promise<void> => {
-    return invokeIPC<void>(IPC_CHANNELS.SETTING.TASK_CONFIG_UPDATE, config);
+    const response = await invokeIPC<ApiResponse<void>>(
+      IPC_CHANNELS.SETTING.TASK_CONFIG_UPDATE,
+      config,
+    );
+    if (response && response.success) {
+      return;
+    }
+    throw new Error("更新任务配置失败");
   },
 
   // ============ 模型列表相关 ============
@@ -142,7 +206,7 @@ export const settingApi = {
   syncModels: async (
     request: LLMModelsSyncRequest,
   ): Promise<LLMModelsSyncResult> => {
-    return invokeIPC<LLMModelsSyncResult>(
+    return await invokeIPC<LLMModelsSyncResult>(
       IPC_CHANNELS.SETTING.MODELS_SYNC,
       request,
     );

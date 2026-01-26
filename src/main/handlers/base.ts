@@ -12,10 +12,12 @@ export abstract class BaseHandler {
    * 注册 IPC 处理器
    * @param channel IPC 通道名称
    * @param handler 处理函数
+   * @param skipWrapResponse 是否跳过响应包装（用于存储等直接返回值的处理器）
    */
   protected register<T>(
     channel: string,
-    handler: (event: IpcMainInvokeEvent, ...args: any[]) => Promise<T>
+    handler: (event: IpcMainInvokeEvent, ...args: any[]) => Promise<T>,
+    skipWrapResponse = false
   ): void {
     // 先移除已存在的处理器，避免重复注册错误
     try {
@@ -28,6 +30,11 @@ export abstract class BaseHandler {
       try {
         const result = await handler(event, ...args);
 
+        // 如果 skipWrapResponse 为 true，直接返回原始结果
+        if (skipWrapResponse) {
+          return result;
+        }
+
         // 包装为标准响应格式
         return this.wrapResponse(result);
       } catch (error) {
@@ -35,9 +42,9 @@ export abstract class BaseHandler {
 
         // "用户未登录" 是预期的业务逻辑，不视为错误
         if (errorMessage.includes('用户未登录')) {
-          logger.info(`\${channel} - 用户未登录`);
+          logger.info(`[${channel}] - 用户未登录`);
         } else {
-          logger.error(`\${channel} 处理失败`, error);
+          logger.error(`[${channel}] 处理失败`, error);
         }
 
         return this.createErrorResponse(error);

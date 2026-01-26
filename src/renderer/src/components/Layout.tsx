@@ -6,6 +6,8 @@ import {
   Button,
   Space,
   message,
+  Avatar,
+  Dropdown,
 } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import {
@@ -17,17 +19,19 @@ import {
   MinusOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  LogoutOutlined,
 } from "@ant-design/icons";
 import { WindowState as WindowStateEnum } from "@/shared/types/ipc";
 import { useAuthStore } from "../store/authStore";
 
 const { Header, Content, Sider } = AntLayout;
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(true);
+  const { isLoggedIn, user, logout } = useAuthStore();
 
   const menuItems = [
     { key: "/home", icon: <HomeOutlined />, label: "首页" },
@@ -56,16 +60,14 @@ const Layout: React.FC = () => {
         message.warning("窗口隐藏功能不可用");
       }
     } catch (error) {
-      console.error("隐藏窗口部败:", error);
-      message.error("隐藏窗口部败");
+      console.error("隐藏窗口失败:", error);
+      message.error("隐藏窗口失败");
     }
   };
 
   const handleLogout = async () => {
     try {
       const electronAPI = (window as any).electronAPI;
-      const { logout } = useAuthStore.getState();
-
       await logout();
 
       if (electronAPI?.window) {
@@ -85,6 +87,26 @@ const Layout: React.FC = () => {
     const path = location.pathname;
     return path === "/" ? ["/home"] : [path];
   };
+
+  // 用户下拉菜单项
+  const userMenuItems = [
+    {
+      key: 'profile',
+      label: '详情',
+      onClick: () => navigate('/profile'),
+    },
+    {
+      key: 'divider',
+      type: 'divider' as const,
+    },
+    {
+      key: 'logout',
+      label: '退出登录',
+      icon: <LogoutOutlined />,
+      onClick: handleLogout,
+      danger: true as const,
+    },
+  ];
 
   return (
     <AntLayout style={{ minHeight: "100vh" }}>
@@ -119,9 +141,6 @@ const Layout: React.FC = () => {
           </Title>
         </Space>
         <Space>
-          <Button type="text" icon={<UserOutlined />} onClick={handleLogout}>
-            退出
-          </Button>
           <Button
             type="text"
             icon={<MinusOutlined />}
@@ -129,6 +148,46 @@ const Layout: React.FC = () => {
           >
             隐藏
           </Button>
+          {isLoggedIn && user && (
+            <Dropdown
+              menu={{
+                items: userMenuItems,
+              }}
+              placement="bottomRight"
+              trigger={['click']}
+            >
+              <Space
+                style={{
+                  cursor: 'pointer',
+                  padding: '4px 12px',
+                  borderRadius: '8px',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f5f5f5';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                <Avatar
+                  size={32}
+                  icon={<UserOutlined />}
+                  style={{
+                    backgroundColor: '#1890ff',
+                    border: '2px solid #fff',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>
+                    {user.name ? user.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U')}
+                  </Text>
+                </Avatar>
+                <Text style={{ fontSize: 14, fontWeight: 500, color: '#333' }}>
+                  {user.name}
+                </Text>
+              </Space>
+            </Dropdown>
+          )}
         </Space>
       </Header>
       <AntLayout>

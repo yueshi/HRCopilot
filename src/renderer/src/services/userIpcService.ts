@@ -1,6 +1,7 @@
 import { invokeIPC } from './ipcApi';
 import { IPC_CHANNELS } from '../../../shared/types';
 import type {
+  ApiResponse,
   UserData,
   UserRegisterRequest,
   UserLoginRequest,
@@ -11,128 +12,124 @@ import type {
   UserStatsData,
 } from '../../../shared/types';
 
-/**
- * 用户 IPC 服务
- * 替代原来的 authService.ts
- */
+const console = window.console;
+
+const electronAPI = (window as any).electronAPI;
+
 export const userApi = {
-  /**
-   * 用户注册
-   */
   register: async (
     data: UserRegisterRequest
   ): Promise<UserRegisterResponse> => {
-    const response = await invokeIPC<UserRegisterResponse>(
+    const response = await invokeIPC<ApiResponse<UserRegisterResponse>>(
       IPC_CHANNELS.USER.REGISTER,
       data
     );
-    return response;
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+    throw new Error('注册失败');
   },
 
-  /**
-   * 用户登录
-   */
   login: async (
     email: string,
     password: string
   ): Promise<UserLoginResponse> => {
-    // 这里需要注意：invokeIPC 已经处理了 ApiResponse 的包装，直接返回 data 部分
-    // 所以 response 已经是 UserLoginResponse 类型（包含 user 字段）
-    const response = await invokeIPC<UserLoginResponse>(
+    const response = await invokeIPC<ApiResponse<UserLoginResponse>>(
       IPC_CHANNELS.USER.LOGIN,
       { email, password } as UserLoginRequest
     );
 
-    console.log('userApi.login response:', response); // 添加调试日志
+    console.log('userApi.login response:', response);
 
-    // 登录成功，保存用户信息到本地存储
-    if (response && 'user' in response && response.user) {
-      localStorage.setItem('user-storage', JSON.stringify({
-        user: response.user,
+    if (response && response.success && response.data && response.data.user) {
+      const dataToStore = {
+        user: response.data.user,
         timestamp: Date.now(),
-      }));
+      };
+      console.log('userApi.login 保存到持久化存储:', dataToStore);
+      await electronAPI?.storage?.setItem('user-storage', JSON.stringify(dataToStore));
+      const saved = await electronAPI?.storage?.getItem('user-storage');
+      console.log('userApi.login 验证保存:', saved);
+      return response.data;
     } else {
       console.error('登录响应格式错误:', response);
       throw new Error('登录响应格式错误');
     }
-
-    return response;
   },
 
-  /**
-   * 获取用户资料
-   */
   getProfile: async (): Promise<UserData> => {
-    return invokeIPC<UserData>(
+    const response = await invokeIPC<ApiResponse<UserData>>(
       IPC_CHANNELS.USER.GET_PROFILE
     );
+    console.log('userApi.getProfile response:', response);
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+    throw new Error('获取用户资料失败');
   },
 
-  /**
-   * 更新用户资料
-   */
   updateProfile: async (
     data: UserUpdateProfileRequest
   ): Promise<UserData> => {
-    return invokeIPC<UserData>(
+    const response = await invokeIPC<ApiResponse<UserData>>(
       IPC_CHANNELS.USER.UPDATE_PROFILE,
       data
     );
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+    throw new Error('更新用户资料失败');
   },
 
-  /**
-   * 修改密码
-   */
   changePassword: async (
     data: UserChangePasswordRequest
   ): Promise<void> => {
-    return invokeIPC<void>(
+    const response = await invokeIPC<ApiResponse<void>>(
       IPC_CHANNELS.USER.CHANGE_PASSWORD,
       data
     );
+    if (response && response.success) {
+      return;
+    }
+    throw new Error('修改密码失败');
   },
 
-  /**
-   * 获取用户统计
-   */
   getStats: async (): Promise<UserStatsData> => {
-    return invokeIPC<UserStatsData>(
+    const response = await invokeIPC<ApiResponse<UserStatsData>>(
       IPC_CHANNELS.USER.GET_STATS
     );
+    if (response && response.success && response.data) {
+      return response.data;
+    }
+    throw new Error('获取用户统计失败');
   },
 
-  /**
-   * 用户登出
-   */
   logout: async (): Promise<void> => {
-    // 清除本地存储
-    localStorage.removeItem('user-storage');
+    console.log('[userApi] logout 被调用，清除持久化存储');
+    await electronAPI?.storage?.removeItem('user-storage');
 
     return invokeIPC<void>(
       IPC_CHANNELS.USER.LOGOUT
     );
   },
 
-  /**
-   * 检查登录状态
-   */
-  isLoggedIn: (): boolean => {
-    const userStorage = localStorage.getItem('user-storage');
+  isLoggedIn: async (): Promise<boolean> => {
+    const userStorage = await electronAPI?.storage?.getItem('user-storage');
+    console.log('[userApi] isLoggedIn 检查持久化存储:', userStorage);
     if (!userStorage) return false;
 
     try {
       const data = JSON.parse(userStorage);
+      console.log('[userApi] isLoggedIn 解析后 data:', data, '有user:', !!data.user);
       return !!data.user;
     } catch {
+      console.error('[userApi] isLoggedIn 解析失败');
       return false;
     }
   },
 
-  /**
-   * 获取当前用户
-   */
-  getCurrentUser: (): UserData | null => {
-    const userStorage = localStorage.getItem('user-storage');
+  getCurrentUser: async (): Promise<UserData | null> => {
+    const userStorage = await electronAPI?.storage?.getItem('user-storage');
     if (!userStorage) return null;
 
     try {
@@ -140,6 +137,56 @@ export const userApi = {
       return data.user || null;
     } catch {
       return null;
+    }
+  },
+
+  getLastLoginInfo: async (): Promise<{ user: UserData; timestamp: number } | null> => {
+    const userStorage = await electronAPI?.storage?.getItem('user-storage');
+    console.log('[userApi] 持久化存储 user-storage:', userStorage);
+    if (!userStorage) return null;
+
+    try {
+      const data = JSON.parse(userStorage);
+      console.log('[userApi] 解析后的数据:', data);
+      if (!data.user || !data.timestamp) {
+        console.log('[userApi] 数据缺少 user 或 timestamp');
+        return null;
+      }
+
+      const now = Date.now();
+      const thirtyMinutes = 30 * 60 * 1000;
+      const timeDiff = now - data.timestamp;
+      const isValid = timeDiff < thirtyMinutes;
+
+      console.log('[userApi] 时间检查:', {
+        now,
+        timestamp: data.timestamp,
+        timeDiff,
+        thirtyMinutes,
+        isValid,
+        minutesAgo: Math.floor(timeDiff / (60 * 1000))
+      });
+
+      return isValid ? { user: data.user, timestamp: data.timestamp } : null;
+    } catch (error) {
+      console.error('[userApi] getLastLoginInfo 错误:', error);
+      return null;
+    }
+  },
+
+  updateActivityTimestamp: async (): Promise<void> => {
+    const userStorage = await electronAPI?.storage?.getItem('user-storage');
+    if (!userStorage) return;
+
+    try {
+      const data = JSON.parse(userStorage);
+      if (data.user) {
+        data.timestamp = Date.now();
+        await electronAPI?.storage?.setItem('user-storage', JSON.stringify(data));
+        console.log('[userApi] updateActivityTimestamp 更新时间戳:', data.timestamp);
+      }
+    } catch (error) {
+      console.error('[userApi] updateActivityTimestamp 错误:', error);
     }
   },
 };

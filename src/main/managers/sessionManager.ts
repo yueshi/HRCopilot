@@ -1,5 +1,8 @@
 import type { UserData } from '../../shared/types';
 import { logger } from '../utils/logger';
+import fs from 'fs';
+import path from 'path';
+import { app } from 'electron';
 
 /**
  * 用户会话信息
@@ -11,14 +14,42 @@ interface UserSession {
 }
 
 /**
+ * 会话数据结构（用于持久化存储）
+ */
+interface SessionData {
+  userId: number;
+  user: UserData;
+  loginTime: string;
+}
+
+/**
+ * 前端 storage.json 的结构
+ */
+interface UserStorageData {
+  user: UserData;
+  timestamp: number;
+}
+
+/**
+ * storage.json 的完整结构
+ */
+interface StorageJson {
+  'user-storage'?: string;
+}
+
+/**
  * 会话管理器（单例）
  * 管理用户登录状态和会话信息
  */
 class SessionManager {
   private static instance: SessionManager | null = null;
   private currentUser: UserSession | null = null;
+  private readonly SESSION_FILE_PATH: string;
+  private readonly STORAGE_FILE_PATH: string;
 
   private constructor() {
+    this.SESSION_FILE_PATH = path.join(app.getPath('userData'), 'session.json');
+    this.STORAGE_FILE_PATH = path.join(app.getPath('userData'), 'storage.json');
     this.loadSessionFromStorage();
   }
 
@@ -83,20 +114,21 @@ class SessionManager {
   }
 
   /**
-   * 保存会话到本地存储
+   * 保存会话到本地存储（同步）
    */
   private saveSessionToStorage(): void {
     if (this.currentUser) {
       try {
-        const sessionData = JSON.stringify({
+        const sessionData: SessionData = {
           userId: this.currentUser.userId,
           user: this.currentUser.user,
           loginTime: this.currentUser.loginTime.toISOString(),
-        });
+        };
 
-        // 使用 Electron 的 localStorage API
-        // 这里可以通过主进程存储到文件或使用其他持久化方式
-        // 简化实现：仅保存在内存中
+        // 保存到 session.json
+        this.ensureDirectoryExists(this.SESSION_FILE_PATH);
+        fs.writeFileSync(this.SESSION_FILE_PATH, JSON.stringify(sessionData, null, 2), 'utf-8');
+        logger.info(`会话已保存到: ${this.SESSION_FILE_PATH}`);
       } catch (error) {
         logger.error('保存会话失败:', error);
       }
@@ -104,25 +136,87 @@ class SessionManager {
   }
 
   /**
-   * 从本地存储加载会话
+   * 从本地存储加载会话（同步）
    */
   private loadSessionFromStorage(): void {
     try {
-      // 简化实现：从内存中恢复
-      // 实际应用中可以从文件或 Electron store 加载
-    } catch (error) {
-      logger.error('加载会话失败:', error);
+      // 优先从 storage.json 读取（与前端保持一致）
+      if (fs.existsSync(this.STORAGE_FILE_PATH)) {
+        const fileContent = fs.readFileSync(this.STORAGE_FILE_PATH, 'utf-8');
+        const storageJson: StorageJson = JSON.parse(fileContent);
+
+        if (storageJson['user-storage']) {
+          const userStorageStr = storageJson['user-storage'];
+          const userStorage: UserStorageData = JSON.parse(userStorageStr);
+
+          // 恢复用户会话
+          this.currentUser = {
+            userId: userStorage.user.id,
+            user: userStorage.user,
+            loginTime: new Date(userStorage.timestamp),
+          };
+
+          logger.info(`会话已从 ${this.STORAGE_FILE_PATH} 恢复，用户ID: ${userStorage.user.id}, 邮箱: ${userStorage.user.email}`);
+          return;
+        }
+      }
+
+      // 如果 storage.json 没有，尝试从 session.json 读取（向后兼容）
+      if (fs.existsSync(this.SESSION_FILE_PATH)) {
+        const fileContent = fs.readFileSync(this.SESSION_FILE_PATH, 'utf-8');
+        const sessionData = JSON.parse(fileContent) as SessionData;
+
+        this.currentUser = {
+          userId: sessionData.userId,
+          user: sessionData.user,
+          loginTime: new Date(sessionData.loginTime),
+        };
+
+        logger.info(`会话已从 ${this.SESSION_FILE_PATH} 恢复（向后兼容），用户ID: ${sessionData.userId}`);
+      } else {
+        logger.info('会话文件不存在，跳过加载');
+      }
+    } catch (error: any) {
+      if (error?.code !== 'ENOENT') {
+        logger.error('加载会话失败:', error);
+      }
+      // 文件不存在或读取失败是正常情况，不需要报错
     }
   }
 
   /**
-   * 清除本地存储的会话
+   * 清除本地存储的会话（同步）
    */
   private clearSessionFromStorage(): void {
     try {
-      // 清除本地存储
-    } catch (error) {
-      logger.error('清除会话失败:', error);
+      // 清除 session.json
+      if (fs.existsSync(this.SESSION_FILE_PATH)) {
+        fs.unlinkSync(this.SESSION_FILE_PATH);
+        logger.info(`会话文件已删除: ${this.SESSION_FILE_PATH}`);
+      }
+
+      // 清除 storage.json 中的 user-storage
+      if (fs.existsSync(this.STORAGE_FILE_PATH)) {
+        const fileContent = fs.readFileSync(this.STORAGE_FILE_PATH, 'utf-8');
+        const storageJson: StorageJson = JSON.parse(fileContent);
+        delete storageJson['user-storage'];
+        fs.writeFileSync(this.STORAGE_FILE_PATH, JSON.stringify(storageJson, null, 2), 'utf-8');
+        logger.info(`storage.json 中的 user-storage 已清除`);
+      }
+    } catch (error: any) {
+      if (error?.code !== 'ENOENT') {
+        logger.error('清除会话失败:', error);
+      }
+    }
+  }
+
+  /**
+   * 确保目录存在
+   */
+  private ensureDirectoryExists(filePath: string): void {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
   }
 }

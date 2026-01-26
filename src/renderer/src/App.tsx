@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { Layout as AntLayout } from "antd";
 
 import Layout from "./components/Layout";
@@ -13,6 +13,7 @@ import VersionManagePage from "./pages/VersionManagePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import SettingsPage from "./pages/SettingsPage";
+import ProfilePage from "./pages/ProfilePage";
 import MinibarPage from "./pages/MinibarPage";
 import { useAuthStore } from "./store/authStore";
 import { userApi } from "./services/userIpcService";
@@ -42,25 +43,44 @@ const MainWindowApp: React.FC = () => {
   const { isLoggedIn, isLoading, user, fetchUser } = useAuthStore();
   const [isInitializing, setIsInitializing] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
+  const [lastLoginInfo, setLastLoginInfo] = useState<{ user: any; timestamp: number } | null>(null);
 
+  // 初始化：只在组件挂载时执行一次
   useEffect(() => {
     const initApp = async () => {
       console.log("[MainWindowApp] 开始初始化");
 
       try {
-        const currentUser = userApi.getCurrentUser();
-        console.log("[MainWindowApp] localStorage 中的用户:", currentUser);
-        console.log("[MainWindowApp] Store 中的用户:", user);
+        // 1. 检查是否有30分钟内的上次登录信息
+        const currentUser = await userApi.getCurrentUser();
+        const lastLogin = await userApi.getLastLoginInfo();
 
-        if (currentUser && !user) {
+        console.log("[MainWindowApp] localStorage 中的用户:", currentUser);
+        console.log("[MainWindowApp] 上次登录信息:", lastLogin);
+        console.log("[MainWindowApp] Store 中的用户:", user);
+        console.log("[MainWindowApp] isLoggedIn:", isLoggedIn);
+
+        if (lastLogin) {
+          setLastLoginInfo(lastLogin);
+        }
+
+        // 2. 如果 Store 中已有登录状态，直接使用
+        if (isLoggedIn && user) {
+          console.log("[MainWindowApp] Store 中已登录，更新活跃时间戳");
+          await userApi.updateActivityTimestamp();
+        }
+        // 3. 如果有上次登录信息，尝试从服务器恢复 session
+        else if (lastLogin) {
           try {
-            console.log("[MainWindowApp] 开始从服务器获取用户信息");
+            console.log("[MainWindowApp] 检测到上次登录信息，尝试从服务器恢复 session");
             await fetchUser();
-            console.log("[MainWindowMainWindowApp] fetchUser 完成");
+            console.log("[MainWindowApp] Session 恢复成功，自动登录");
+            // fetchUser 会自动设置 isLoggedIn = true
           } catch (error) {
-            // Session 失效，静默清理
+            // Session 失效，需要重新登录
+            // 这是正常情况，localStorage 中的 session 已过期
             if (import.meta.env.DEV) {
-              console.info("[MainWindowApp] Session 已失效");
+              console.info("[MainWindowApp] Session 已失效，需要重新输入密码");
             }
           }
         }
@@ -84,6 +104,7 @@ const MainWindowApp: React.FC = () => {
     isInitializing,
     authChecked,
     user,
+    lastLoginInfo,
   });
 
   // 初始化中显示加载界面
@@ -102,7 +123,7 @@ const MainWindowApp: React.FC = () => {
       <Route
         path="/login"
         element={
-          isLoggedIn ? <Navigate to="/home" replace /> : <LoginPage />
+          isLoggedIn ? <Navigate to="/home" replace /> : <LoginPage lastLoginInfo={lastLoginInfo} />
         }
       />
       <Route
@@ -130,6 +151,10 @@ const MainWindowApp: React.FC = () => {
 
       <Route path="/settings" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<SettingsPage />} />
+      </Route>
+
+      <Route path="/profile" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route index element={<ProfilePage />} />
       </Route>
 
       {/* 未登录且不是登录/注册页面，重定向到登录页 */}

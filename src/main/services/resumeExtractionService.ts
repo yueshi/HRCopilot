@@ -151,7 +151,7 @@ export class ResumeExtractionService {
       '- phone: 电话号码' +
       '- skills: 技能列表（数组）' +
       '- education: 教育经历数组，每个元素包含 school, degree, major, period' +
-      '- experience: 工作经历数组，每个元素包含 company, position, period, description' +
+      '- experience: 工作经历数组，每个元素包含 company, position, startDate, endDate, period, description' +
       '\n\n' +
       '可选字段：' +
       '\n- gender: 性别' +

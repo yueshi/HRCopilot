@@ -1,5 +1,5 @@
 import { invokeIPC } from './ipcApi';
-import { IPC_CHANNELS } from '@/shared/types';
+import { IPC_CHANNELS, type ApiResponse } from '@/shared/types';
 import type {
   ResumeData,
   ResumeListData,
@@ -41,7 +41,7 @@ export const resumeApi = {
     const arrayBuffer = await file.arrayBuffer();
     const fileData = new Uint8Array(arrayBuffer);
 
-    const response = await invokeIPC<ResumeUploadResponse>(
+    const response = await invokeIPC<ApiResponse<ResumeUploadResponse>>(
       IPC_CHANNELS.RESUME.UPLOAD,
       {
         fileData,
@@ -52,7 +52,7 @@ export const resumeApi = {
       } as ResumeUploadRequest
     );
 
-    return response;
+    return response.data!;
   },
 
   /**
@@ -62,20 +62,22 @@ export const resumeApi = {
     page: number = 1,
     limit: number = 10
   ): Promise<ResumeListData> => {
-    return invokeIPC<ResumeListData>(
+    const response = await invokeIPC<ApiResponse<ResumeListData>>(
       IPC_CHANNELS.RESUME.LIST,
       { page, limit } as ResumeListRequest
     );
+    return response.data!;
   },
 
   /**
    * 获取单个简历
    */
   getResume: async (id: number): Promise<ResumeData> => {
-    return invokeIPC<ResumeData>(
+    const response = await invokeIPC<ApiResponse<ResumeData>>(
       IPC_CHANNELS.RESUME.GET,
       { id } as ResumeGetRequest
     );
+    return response.data!;
   },
 
   /**
@@ -85,10 +87,11 @@ export const resumeApi = {
     id: number,
     jobDescription: string
   ): Promise<ResumeAnalyzeResponse> => {
-    return invokeIPC<ResumeAnalyzeResponse>(
+    const response = await invokeIPC<ApiResponse<ResumeAnalyzeResponse>>(
       IPC_CHANNELS.RESUME.ANALYZE,
       { id, jobDescription } as ResumeAnalyzeRequest
     );
+    return response.data!;
   },
 
   /**
@@ -103,20 +106,22 @@ export const resumeApi = {
       length?: 'short' | 'medium' | 'long';
     }
   ): Promise<OptimizationResultData> => {
-    return invokeIPC<OptimizationResultData>(
+    const response = await invokeIPC<ApiResponse<OptimizationResultData>>(
       IPC_CHANNELS.RESUME.OPTIMIZE,
       { id, job, options } as ResumeOptimizeRequest
     );
+    return response.data!;
   },
 
   /**
    * 获取处理状态
    */
   getResumeStatus: async (id: number): Promise<ResumeStatusData> => {
-    return invokeIPC<ResumeStatusData>(
+    const response = await invokeIPC<ApiResponse<ResumeStatusData>>(
       IPC_CHANNELS.RESUME.GET_STATUS,
       { id } as ResumeGetStatusRequest
     );
+    return response.data!;
   },
 
   /**
@@ -127,20 +132,22 @@ export const resumeApi = {
     count: number = 5,
     type: 'technical' | 'behavioral' | 'situational' | 'all' = 'all'
   ): Promise<ResumeGenerateQuestionsResponse> => {
-    return invokeIPC<ResumeGenerateQuestionsResponse>(
+    const response = await invokeIPC<ApiResponse<ResumeGenerateQuestionsResponse>>(
       IPC_CHANNELS.RESUME.GENERATE_QUESTIONS,
       { id, count, type } as ResumeGenerateQuestionsRequest
     );
+    return response.data!;
   },
 
   /**
    * 删除简历
    */
   deleteResume: async (id: number): Promise<void> => {
-    return invokeIPC<void>(
+    const response = await invokeIPC<ApiResponse<void>>(
       IPC_CHANNELS.RESUME.DELETE,
       { id } as ResumeDeleteRequest
     );
+    return;
   },
 
   /**
@@ -153,10 +160,11 @@ export const resumeApi = {
       status?: string;
     }
   ): Promise<ResumeData> => {
-    return invokeIPC<ResumeData>(
+    const response = await invokeIPC<ApiResponse<ResumeData>>(
       IPC_CHANNELS.RESUME.UPDATE,
       { id, ...updates } as ResumeUpdateRequest
     );
+    return response.data!;
   },
 
   /**
@@ -165,9 +173,10 @@ export const resumeApi = {
   extractResumeInfo: async (
     id: number
   ): Promise<ResumeExtractResponse> => {
-    return invokeIPC<ResumeExtractResponse>(
+    const response = await invokeIPC<ApiResponse<ResumeExtractResponse>>(
       IPC_CHANNELS.RESUME.EXTRACT,
       { id } as ResumeExtractRequest
     );
+    return response.data!;
   },
 };

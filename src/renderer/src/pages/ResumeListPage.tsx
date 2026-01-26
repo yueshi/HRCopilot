@@ -76,13 +76,13 @@ const ResumeListPage: React.FC = () => {
   // 处理搜索
   const handleSearch = (value: string) => {
     setSearchText(value);
-    setPagination(prev => ({ ...prev, current: 1 }));
+    setPagination(prev => ({ ...(prev || { current: 1, pageSize: 12, total: 0, pages: 0 }), current: 1 }));
   };
 
   // 处理筛选
   const handleFilter = (value: string) => {
     setFilterStatus(value);
-    setPagination(prev => ({ ...prev, current: 1 }));
+    setPagination(prev => ({ ...(prev || { current: 1, pageSize: 12, total: 0, pages: 0 }), current: 1 }));
   };
 
   // 处理排序
@@ -93,9 +93,9 @@ const ResumeListPage: React.FC = () => {
   // 处理选择
   const handleSelect = (resumeId: string, checked: boolean) => {
     if (checked) {
-      setSelectedResumes(prev => [...prev, resumeId]);
+      setSelectedResumes(prev => [...(prev || []), resumeId]);
     } else {
-      setSelectedResumes(prev => prev.filter(id => id !== resumeId));
+      setSelectedResumes(prev => (prev || []).filter(id => id !== resumeId));
     }
   };
 
@@ -253,7 +253,7 @@ const ResumeListPage: React.FC = () => {
 
     if (pagination.total !== total || pagination.pages !== pages) {
       setPagination(prev => ({
-        ...prev,
+        ...(prev || { current: 1, pageSize: 12, total: 0, pages: 0 }),
         total,
         pages,
       }));

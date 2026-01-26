@@ -138,13 +138,13 @@ const HRAssistantPage: React.FC = () => {
     const handleStreamChunk = (_event: any, data: any) => {
       if (data.chunk) {
         setMessages((prev) => {
-          const newMessages = [...prev];
+          const newMessages = [...(prev || [])];
           const lastMessage = newMessages[newMessages.length - 1];
           if (lastMessage && lastMessage.isStreaming) {
             lastMessage.content += data.chunk;
             return newMessages;
           }
-          return prev;
+          return prev || [];
         });
       }
     };
@@ -152,7 +152,7 @@ const HRAssistantPage: React.FC = () => {
     const handleStreamEnd = (_event: any, data: any) => {
       setSending(false);
       setMessages((prev) => {
-        const newMessages = [...prev];
+        const newMessages = [...(prev || [])];
         const lastMessage = newMessages[newMessages.length - 1];
         if (lastMessage && lastMessage.isStreaming) {
           lastMessage.isStreaming = false;
@@ -164,7 +164,7 @@ const HRAssistantPage: React.FC = () => {
     const handleStreamError = (_event: any, data: any) => {
       message.error(data.error || 'Failed to send message');
       setSending(false);
-      setMessages((prev) => prev.filter((msg) => !msg.isStreaming));
+      setMessages((prev) => (prev || []).filter((msg) => !msg.isStreaming));
     };
 
     electronMenu.onAiHrAssistantStreamChunk?.(handleStreamChunk);
@@ -186,7 +186,7 @@ const HRAssistantPage: React.FC = () => {
       role: 'user',
       content: userMessage,
     };
-    setMessages((prev) => [...prev, userChatMessage]);
+    setMessages((prev) => [...(prev || []), userChatMessage]);
 
     const assistantMessage: ChatMessage = {
       id: 'assistant-' + Date.now(),
@@ -194,7 +194,7 @@ const HRAssistantPage: React.FC = () => {
       content: '',
       isStreaming: true,
     };
-    setMessages((prev) => [...prev, assistantMessage]);
+    setMessages((prev) => [...(prev || []), assistantMessage]);
 
     setInputValue('');
     setSending(true);
@@ -208,7 +208,7 @@ const HRAssistantPage: React.FC = () => {
     } catch (error) {
       message.error('Failed to send message');
       setSending(false);
-      setMessages((prev) => prev.filter((msg) => !msg.isStreaming));
+      setMessages((prev) => (prev || []).filter((msg) => !msg.isStreaming));
     }
   };
 

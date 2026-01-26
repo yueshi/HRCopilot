@@ -1,5 +1,17 @@
 import type { ApiResponse } from "../../../shared/types";
 
+/**
+ * IPC 调用工具函数
+ * 统一处理 Electron IPC 通信
+ */
+
+// 存储操作特殊处理（直接返回值，不是 ApiResponse）
+const STORAGE_CHANNELS = [
+  "storage:get",
+  "storage:set",
+  "storage:remove"
+];
+
 export async function invokeIPC<T = any>(
   channel: string,
   ...args: any[]
@@ -13,7 +25,13 @@ export async function invokeIPC<T = any>(
   try {
     let api: any = electronAPI;
 
-    if (channel.startsWith("user:")) {
+    // 存储通道直接从 electronAPI.storage 获取
+    if (STORAGE_CHANNELS.includes(channel)) {
+      api = electronAPI.storage;
+      const method = channel.split(":")[1]; // "get", "set", "remove"
+      const camelCaseMethod = method === "get" ? "getItem" : method === "set" ? "setItem" : "removeItem";
+      api = api[camelCaseMethod];
+    } else if (channel.startsWith("user:")) {
       api = electronAPI.user;
       const method = channel
         .slice(5)
@@ -79,48 +97,8 @@ export async function invokeIPC<T = any>(
     }
 
     const response = await api(...args);
-    if (import.meta.env.DEV) {
-      console.log(`IPC 调用成功 [${channel}]:`, response);
-    }
-
-    if (response && typeof response === "object" && "success" in response) {
-      if (!response.success) {
-        const apiResponse = response as ApiResponse;
-        throw new Error(apiResponse.error || "操作失败");
-      }
-      return (response as ApiResponse).data as T;
-    }
 
     return response as T;
-  } catch (error) {
-    const errorMessage = error?.message || String(error);
-
-    // "用户未登录" 是预期内的业务逻辑，用 info 级别
-    if (errorMessage.includes("用户未登录")) {
-      if (import.meta.env.DEV) {
-        console.info(`IPC [${channel}]: 用户未登录`);
-      }
-    } else {
-      console.error(`IPC 调用失败 [${channel}]:`, error);
-    }
-
-    throw error;
-  }
-}
-
-export async function invokeIPCFull(
-  channel: string,
-  ...args: any[]
-): Promise<ApiResponse> {
-  const { electronAPI } = window as any;
-
-  if (!electronAPI) {
-    throw new Error("electronAPI 未初始化");
-  }
-
-  try {
-    const response = await electronAPI[channel]?.(...args);
-    return response as ApiResponse;
   } catch (error) {
     const errorMessage = error?.message || String(error);
 

@@ -275,8 +275,7 @@ const ResumeDetailPage: React.FC = () => {
     ...(resume.parsedInfo || {}),
   };
 
-  const hasDetailInfo = parsedInfo.education.length > 0 ||
-    parsedInfo.experience.length > 0 ||
+  const hasDetailInfo = parsedInfo.experience.length > 0 ||
     parsedInfo.projects.length > 0;
 
   return (
@@ -389,7 +388,7 @@ const ResumeDetailPage: React.FC = () => {
               </Descriptions>
             </div>
 
-            {(parsedInfo.expectedSalary || parsedInfo.workYears) && (
+            {(parsedInfo.expectedSalary || parsedInfo.workYears || parsedInfo.education.length > 0) && (
               <>
                 <Divider />
                 <div style={{ marginBottom: 24 }}>
@@ -408,6 +407,34 @@ const ResumeDetailPage: React.FC = () => {
                       </div>
                     )}
                   </Space>
+                  {parsedInfo.education.length > 0 && (
+                    <div style={{ marginTop: 16 }}>
+                      <Title level={5}><BookOutlined /> 教育经历</Title>
+                      <List
+                        dataSource={parsedInfo.education}
+                        renderItem={(edu, index) => (
+                          <List.Item key={index}>
+                            <List.Item.Meta
+                              title={
+                                <Space direction="vertical" size={0}>
+                                  <Text strong>{edu.school || '未知学校'}</Text>
+                                  {edu.degree && (
+                                    <Text type="secondary">{edu.degree}</Text>
+                                  )}
+                                </Space>
+                              }
+                              description={
+                                <Space direction="vertical" size={0}>
+                                  {edu.major && <Tag color="geekblue">{edu.major}</Tag>}
+                                  {edu.period && <Text type="secondary" style={{ marginTop: 4 }}>{edu.period}</Text>}
+                                </Space>
+                              }
+                            />
+                          </List.Item>
+                        )}
+                      />
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -482,7 +509,7 @@ const ResumeDetailPage: React.FC = () => {
               <>
                 <Divider />
                 <Tabs
-                  defaultActiveKey="experience"
+                  defaultActiveKey={parsedInfo.experience.length > 0 ? 'experience' : 'projects'}
                   items={[
                     {
                       key: 'experience',
@@ -528,40 +555,6 @@ const ResumeDetailPage: React.FC = () => {
                           )}
                         />
                       ) : <Empty description="暂无工作经历" />,
-                    },
-                    {
-                      key: 'education',
-                      label: (
-                        <span>
-                          <BookOutlined />
-                          教育经历
-                        </span>
-                      ),
-                      children: parsedInfo.education.length > 0 ? (
-                        <List
-                          dataSource={parsedInfo.education}
-                          renderItem={(edu, index) => (
-                            <List.Item key={index}>
-                              <List.Item.Meta
-                                title={
-                                  <Space direction="vertical" size={0}>
-                                    <Text strong>{edu.school || '未知学校'}</Text>
-                                    {edu.degree && (
-                                      <Text type="secondary">{edu.degree}</Text>
-                                    )}
-                                  </Space>
-                                }
-                                description={
-                                  <Space direction="vertical" size={0}>
-                                    {edu.major && <Tag color="geekblue">{edu.major}</Tag>}
-                                    {edu.period && <Text type="secondary" style={{ marginTop: 4 }}>{edu.period}</Text>}
-                                  </Space>
-                                }
-                              />
-                            </List.Item>
-                          )}
-                        />
-                      ) : <Empty description="暂无教育经历" />,
                     },
                     {
                       key: 'projects',

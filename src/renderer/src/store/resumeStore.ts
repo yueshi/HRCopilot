@@ -42,17 +42,17 @@ export const useResumeStore = create<ResumeState>((set, get) => ({
 
   addResume: (resume) =>
     set((state) => ({
-      resumes: [resume, ...state.resumes],
+      resumes: [resume, ...(state.resumes || [])],
       pagination: {
-        ...state.pagination,
-        total: state.pagination.total + 1,
+        ...(state.pagination || defaultPagination),
+        total: (state.pagination || defaultPagination).total + 1,
       },
     })),
 
   updateResume: (id, updates) =>
     set((state) => ({
-      resumes: state.resumes.map((resume) =>
-        resume.id === id ? { ...resume, ...updates } : resume,
+      resumes: (state.resumes || []).map((resume) =>
+        resume.id === id ? { ...resume, ...(updates || {}) } : resume,
       ),
     })),
 
