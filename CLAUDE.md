@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 HRCopilot 是一个基于 Electron + TypeScript 的桌面应用程序，专注于智能 JD（职位描述）与简历匹配分析。项目采用 Electron 三层架构，支持多 LLM 供应商（GLM、OpenAI、Ollama、Anthropic、Azure、自定义），为求职者提供简历优化、匹配度评估、面试问题生成和 AI HR 助手等功能。
 
+**入口类**: `src/main/main.ts` 中的 `HRCopilotApp` 类
+
 ## 核心功能
 
 1. **JD-简历匹配分析** - 智能分析简历与职位描述的匹配程度
@@ -63,7 +65,7 @@ npm install
 - Electron 主进程，管理应用生命周期和窗口
 - 负责系统 API 访问、数据库操作、文件系统交互
 - 提供 IPC (Inter-Process Communication) 服务接口
-- 核心：`ResumerHelperApp`、`WindowManager`、`AppLifecycleManager`、`WindowStateManager`
+- 核心文件: `main.ts` (HRCopilotApp 入口类)、`windowManager.ts`、`windowState.ts`、`appLifecycle.ts`
 
 **Preload Script** (`src/preload/`)
 - 安全桥接层，通过 contextBridge 暴露 API
@@ -103,7 +105,9 @@ HRCopilot/
 │   │   ├── windowState.ts         # 窗口状态机 (单例)
 │   │   ├── appLifecycle.ts        # 应用生命周期管理器 (单例)
 │   │   ├── controllers/          # 业务控制器
-│   │   │   └── LLMProviderController.ts  # LLM 供应商控制器
+│   │   │   ├── LLMProviderController.ts  # LLM 供应商控制器
+│   │   │   ├── ResumeController.ts       # 简历控制器
+│   │   │   └── UserController.ts          # 用户控制器
 │   │   ├── handlers/            # IPC 请求处理器
 │   │   │   ├── base.ts         # 处理器基类
 │   │   │   ├── index.ts        # 注册所有处理器
@@ -111,8 +115,16 @@ HRCopilot/
 │   │   │   ├── resumeHandler.ts # 简历相关
 │   │   │   ├── settingHandler.ts # 设置/LLM 相关
 │   │   │   ├── aiHrAssistantHandler.ts # AI 助手相关
-│   │   │   └── windowHandler.ts # 窗口管理相关
+│   │   │   ├── dedupeHandler.ts       # 去重相关
+│   │   │   ├── versionHandler.ts      # 版本管理相关
+│   │   │   ├── windowHandler.ts # 窗口管理相关
+│   │   │   └── fileHandler.ts  # 文件相关
 │   │   ├── services/            # 业务服务
+│   │   │   ├── LLMService.ts            # LLM 服务抽象层
+│   │   │   ├── providers/              # LLM 供应商实现
+│   │   │   ├── aiAnalysis.ts           # AI 分析服务
+│   │   │   ├── deduplicationService.ts  # 去重服务
+│   │   │   └── fileParser.ts           # 文件解析服务
 │   │   ├── database/            # 数据库层 (SQLite)
 │   │   │   └── sqlite.ts       # DatabaseService 单例
 │   │   ├── middleware/          # 中间件
@@ -288,6 +300,19 @@ AI_TIMEOUT_MS=30000
 
 ## LLM 服务集成
 
+### LLM 服务架构
+**服务层**: `src/main/services/LLMService.ts` - 统一调用接口，支持缓存和重试
+
+**抽象基类**: `src/main/services/providers/BaseLLMProvider.ts` - 定义统一接口
+
+**供应商实现**:
+- `src/main/services/providers/OpenAIProvider.ts`
+- `src/main/services/providers/GLMProvider.ts`
+- `src/main/services/providers/OllamaProvider.ts`
+- `src/main/services/providers/AnthropicProvider.ts`
+- `src/main/services/providers/AzureProvider.ts`
+- `src/main/services/providers/CustomProvider.ts`
+
 ### 支持的 LLM 类型
 - **openai**: OpenAI API
 - **glm**: 智谱 AI (GLM-4, GLM-4-Flash, GLM-3-Turbo)
@@ -297,6 +322,8 @@ AI_TIMEOUT_MS=30000
 - **custom**: 自定义 API
 
 ### LLMProviderController
+**位置**: `src/main/controllers/LLMProviderController.ts`
+
 负责管理 LLM 供应商配置和调用：
 - `listProviders()`: 列出所有供应商
 - `getProvider(providerId)`: 获取单个供应商
@@ -307,7 +334,7 @@ AI_TIMEOUT_MS=30000
 - `getTaskConfig(taskName)`, `updateTaskConfig(config)`, `listTaskConfigs()`
 
 ### 任务配置
-每个 AI 任务可以配置独立的供应商和模型：
+每个 AI 任务可以配置独立的供应商和模型（存储在 llm_task_config 表）：
 - `resume_analysis`: 简历分析
 - `resume_optimization`: 简历优化
 - `question_generation`: 面试问题生成
@@ -321,14 +348,56 @@ AI_TIMEOUT_MS=30000
 /home          -> HomePage
 /resumes       -> ResumeListPage
 /resumes/:id   -> ResumeDetailPage
+/resumes/:id/hr-assistant -> AIHRAssistantPage
+/resumes/:id/versions -> ResumeVersionsPage
 /upload        -> ResumeUploadPage
 /settings      -> SettingsPage
+/profile       -> ProfilePage
 ```
 
 ### 窗口类型路由
 通过 `window.location.hash` 检测窗口类型：
 - 包含 `window=minibar` -> MinibarPage
 - 其他 -> MainWindowApp (需要登录保护)
+
+## 安全特性
+
+### 进程隔离
+- 渲染进程无 Node.js 集成（`nodeIntegration: false`）
+- 使用 contextBridge 暴露安全 API
+- 所有敏感操作通过 IPC 在主进程执行
+
+### 数据加密
+- API Key 使用 `utils/encryption.ts` 加密存储到数据库
+- 返回给前端时脱敏（显示前 10 个字符 + ...）
+- 用户密码使用 bcryptjs 加密哈希存储
+
+### 认证与授权
+- JWT 令牌机制（`JWT_SECRET`, `JWT_EXPIRE_DAYS`）
+- 用户类型权限控制（free/vip/admin）
+- 所有需要登录的页面受路由保护
+
+## 核心功能流程
+
+### 简历分析流程
+1. 用户上传简历（PDF/DOC/DOCX/TXT）
+2. 主进程使用 fileParser 解析文件内容
+3. 调用 LLM 服务分析简历与 JD 匹配度
+4. 生成评估报告（evaluation JSON）和优化建议
+5. 存储到数据库（resumes 表）并在前端展示
+
+### AI HR 助手流程
+1. 用户选择简历进入 HR 助手页面
+2. 建立与该简历关联的 AI 对话会话
+3. 用户发送消息，通过 IPC 流式传输到 LLM
+4. 实时渲染回复（支持 Markdown）
+5. 保存对话历史到 `ai_conversations` 表
+
+### 去重和版本管理流程
+1. 上传新简历时计算内容哈希（content_hash）和人员哈希（person_hash）
+2. 检测数据库中是否存在相同哈希的简历
+3. 自动创建或添加到简历组（resume_groups 表）
+4. 支持设置主简历（is_primary）和版本管理
 
 ## 应用生命周期管理
 
