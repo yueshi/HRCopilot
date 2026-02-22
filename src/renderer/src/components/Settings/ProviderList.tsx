@@ -25,20 +25,14 @@ import ProviderChatModal from "./ProviderChatModal";
 import type { LLMProvider, LLMProviderType } from "@/shared/types/llm";
 
 const PROVIDER_TYPE_COLORS: Record<LLMProviderType, string> = {
-  openai: "green",
   glm: "blue",
   ollama: "orange",
-  anthropic: "purple",
-  azure: "cyan",
   custom: "default",
 };
 
 const PROVIDER_TYPE_LABELS: Record<LLMProviderType, string> = {
-  openai: "OpenAI",
   glm: "GLM",
   ollama: "Ollama",
-  anthropic: "Anthropic",
-  azure: "Azure",
   custom: "自定义",
 };
 

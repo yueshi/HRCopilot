@@ -9,9 +9,6 @@ export {
   type StreamDoneCallback,
   type StreamErrorCallback,
 } from "./BaseLLMProvider";
-export { OpenAIProvider } from "./OpenAIProvider";
 export { GLMProvider } from "./GLMProvider";
 export { OllamaProvider } from "./OllamaProvider";
-export { AnthropicProvider } from "./AnthropicProvider";
-export { AzureProvider } from "./AzureProvider";
 export { CustomProvider } from "./CustomProvider";

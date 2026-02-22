@@ -275,7 +275,7 @@ export class DatabaseService {
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               provider_id TEXT NOT NULL UNIQUE,
               name TEXT NOT NULL,
-              type TEXT NOT NULL CHECK (type IN ('openai', 'glm', 'ollama', 'anthropic', 'azure', 'custom')),
+              type TEXT NOT NULL CHECK (type IN ('glm', 'ollama', 'custom')),
               base_url TEXT NOT NULL,
               api_key TEXT,
               models TEXT NOT NULL DEFAULT '[]',

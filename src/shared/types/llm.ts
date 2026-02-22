@@ -5,11 +5,8 @@
 // ============ 供应商类型 ============
 
 export type LLMProviderType =
-  | 'openai'
   | 'glm'
   | 'ollama'
-  | 'anthropic'
-  | 'azure'
   | 'custom';
 
 // ============ 消息类型 ============
@@ -154,13 +151,6 @@ export interface LLMProviderPreset {
 // 预设供应商模板
 export const LLM_PROVIDER_PRESETS: LLMProviderPreset[] = [
   {
-    type: 'openai',
-    name: 'OpenAI',
-    base_url: 'https://api.openai.com/v1',
-    default_models: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo', 'o1', 'o1-mini'],
-    description: 'OpenAI 官方 API',
-  },
-  {
     type: 'glm',
     name: 'GLM (智谱 AI)',
     base_url: 'https://open.bigmodel.cn/api/paas/v4',
@@ -173,20 +163,6 @@ export const LLM_PROVIDER_PRESETS: LLMProviderPreset[] = [
     base_url: 'http://localhost:11434/v1',
     default_models: ['llama2', 'mistral', 'codellama', 'phi'],
     description: '本地 Ollama 部署服务'
-  },
-  {
-    type: 'anthropic',
-    name: 'Anthropic (Claude)',
-    base_url: 'https://api.anthropic.com/v1',
-    default_models: ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307'],
-    description: 'Anthropic Claude 系列模型'
-  },
-  {
-    type: 'azure',
-    name: 'Azure OpenAI',
-    base_url: 'https://{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions',
-    default_models: ['gpt-4', 'gpt-35-turbo'],
-    description: 'Azure OpenAI 服务'
   },
   {
     type: 'custom',

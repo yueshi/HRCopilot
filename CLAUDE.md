@@ -180,7 +180,7 @@ HRCopilot/
 ### IPC 通道分类
 - `SYSTEM`: 系统相关 (get-version, get-health)
 - `USER`: 用户相关 (register, login, get-profile, update-profile, change-password, get-stats, logout)
-- `RESUME`: 简历相关 (upload, list, get, update, delete, analyze, optimize, get-status, generate-questions)
+- `RESUME`: 简历相关 (upload, list, get, update, delete, analyze, optimize, get-status, generate-questions, extract)
 - `FILE`: 文件相关 (parse, validate)
 - `DATABASE`: 数据库相关 (get-path, export, import, get-stats)
 - `SETTING`: 设置相关 (LLM 供应商、任务配置、模型同步)
@@ -301,7 +301,7 @@ AI_TIMEOUT_MS=30000
 ## LLM 服务集成
 
 ### LLM 服务架构
-**服务层**: `src/main/services/LLMService.ts` - 统一调用接口，支持缓存和重试
+**服务层**: `src/main/services/LLMService.ts` - 统一调用接口，支持缓存、重试和降级
 
 **抽象基类**: `src/main/services/providers/BaseLLMProvider.ts` - 定义统一接口
 
@@ -313,6 +313,13 @@ AI_TIMEOUT_MS=30000
 - `src/main/services/providers/AzureProvider.ts`
 - `src/main/services/providers/CustomProvider.ts`
 
+**核心特性**:
+- **缓存机制**: 供应商实例和任务配置都支持缓存
+- **重试机制**: 默认重试 3 次，每次延迟递增 (1000ms, 2000ms, 3000ms)
+- **降级机制**: 主供应商失败后自动尝试备用供应商（按 sort_order 排序）
+- **流式支持**: 支持流式输出，提供 `callStream()` 方法
+- **日志记录**: 所有调用自动记录到 llm_call_logs 表
+
 ### 支持的 LLM 类型
 - **openai**: OpenAI API
 - **glm**: 智谱 AI (GLM-4, GLM-4-Flash, GLM-3-Turbo)
@@ -322,7 +329,7 @@ AI_TIMEOUT_MS=30000
 - **custom**: 自定义 API
 
 ### LLMProviderController
-**位置**: `src/main/controllers/LLMProviderController.ts`
+**位置**: `src/main/controllers/LLMProviderController.ts` (单例)
 
 负责管理 LLM 供应商配置和调用：
 - `listProviders()`: 列出所有供应商
@@ -331,6 +338,7 @@ AI_TIMEOUT_MS=30000
 - `testConnection(request)`: 测试供应商连接
 - `setDefaultProvider(providerId)`, `getDefaultProvider()`
 - `syncModels(request)`: 同步模型列表
+- `chat(request)`: 供应商聊天测试
 - `getTaskConfig(taskName)`, `updateTaskConfig(config)`, `listTaskConfigs()`
 
 ### 任务配置
@@ -386,6 +394,13 @@ AI_TIMEOUT_MS=30000
 4. 生成评估报告（evaluation JSON）和优化建议
 5. 存储到数据库（resumes 表）并在前端展示
 
+### 简历信息提取流程
+1. 用户上传简历文件
+2. 主进程解析文件内容
+3. 调用 LLM 提取简历结构化信息（姓名、联系方式、工作经历、教育背景等）
+4. 提取结果存储到 resumes 表的 parsed_info 字段
+5. 前端可以展示结构化的简历信息
+
 ### AI HR 助手流程
 1. 用户选择简历进入 HR 助手页面
 2. 建立与该简历关联的 AI 对话会话
@@ -426,8 +441,19 @@ appLifecycle.registerCallbacks({
 ## 状态管理
 
 ### Zustand Store
-- `authStore.ts`: 用户认证状态 (user, isLoggedIn, login, logout, register...)
-- `resumeStore.ts`: 简历数据状态
+- `src/renderer/src/store/authStore.ts`: 用户认证状态
+  - State: user, isLoggedIn, isLoading, error, stats
+  - Actions: login, logout, register, updateProfile, changePassword, fetchUser, fetchStats
+  - 权限工具函数: hasPermission, isVipOrAbove, isAdmin
+- `src/renderer/src/store/resumeStore.ts`: 简历数据状态
+
+### 自动登录机制
+应用支持 30 分钟内免登录功能：
+- 用户登录成功后，将用户信息和时间戳保存到 localStorage
+- 应用启动时，检查 localStorage 中的登录信息
+- 如果存在 30 分钟内的登录记录，尝试从服务器恢复 session
+- session 恢复失败时（如服务器重启），需要重新输入密码
+- active timestamp 用于跟踪用户活跃状态
 
 ## TypeScript 配置
 
@@ -441,12 +467,13 @@ appLifecycle.registerCallbacks({
 1. **IPC 通信**: 所有主进程与渲染进程通信必须通过 IPC，使用定义好的通道
 2. **Handler 注册**: 新增 Handler 需在 `handlers/index.ts` 的 `registerAllHandlers()` 中注册
 3. **窗口状态切换**: 使用 `windowStateManager.transitionTo(newState)` 切换窗口状态
-4. **单例模式**: WindowManager、WindowStateManager、AppLifecycleManager、DatabaseService 都是单例
+4. **单例模式**: WindowManager、WindowStateManager、AppLifecycleManager、DatabaseService、LLMProviderController、LLMService 都是单例
 5. **数据库迁移**: 新增表或字段需在 `sqlite.ts` 的 `migrations` 数组中添加迁移脚本
 6. **API Key 安全**: LLM API Key 使用加密存储，返回给前端时脱敏
 7. **原生模块**: better-sqlite3 需要为当前平台编译，安装后运行 `npm run electron-rebuild`
 8. **开发模式退出**: 开发模式下 Ctrl+C 会终止整个进程组，包括 concurrently 和 Vite
 9. **窗口类型检测**: 前端通过 URL hash (`window=minibar`) 检测窗口类型并渲染不同组件
+10. **LLM 服务降级**: 主供应商失败后会自动尝试备用供应商，按 sort_order 排序
 
 ## 当前开发状态
 

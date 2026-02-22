@@ -29,12 +29,14 @@ export abstract class BaseLLMProvider {
   protected baseUrl: string;
   protected apiKey?: string;
   protected parameters: LLMParameters;
+  protected models: string[];
 
   constructor(config: LLMProvider) {
     this.providerId = config.provider_id;
     this.baseUrl = config.base_url;
     this.apiKey = config.api_key;
     this.parameters = config.parameters;
+    this.models = config.models || [];
   }
 
   /**

@@ -136,8 +136,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
     value: preset.type,
   }));
 
-  // Azure 供应商需要额外的 api_version 参数
-  const isAzure = providerType === "azure";
+
 
   return (
     <Modal
@@ -340,25 +339,7 @@ const ProviderForm: React.FC<ProviderFormProps> = ({
                     />
                   </Form.Item>
 
-                  {isAzure && (
-                    <Form.Item
-                      name={["parameters", "api_version"]}
-                      label="API Version"
-                      tooltip="Azure OpenAI API 版本"
-                      initialValue="2024-02-15-preview"
-                    >
-                      <Select
-                        options={[
-                          {
-                            label: "2024-02-15-preview",
-                            value: "2024-02-15-preview",
-                          },
-                          { label: "2024-02-01", value: "2024-02-01" },
-                          { label: "2023-05-15", value: "2023-05-15" },
-                        ]}
-                      />
-                    </Form.Item>
-                  )}
+
                 </>
               ),
             },

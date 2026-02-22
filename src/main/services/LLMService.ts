@@ -7,11 +7,8 @@ import { database } from "../database/sqlite";
 import { logger } from "../utils/logger";
 import {
   BaseLLMProvider,
-  OpenAIProvider,
   GLMProvider,
   OllamaProvider,
-  AnthropicProvider,
-  AzureProvider,
   CustomProvider,
   type StreamOptions,
 } from "./providers";
@@ -65,16 +62,10 @@ export class LLMService {
    */
   private createProvider(config: any): BaseLLMProvider {
     switch (config.type) {
-      case "openai":
-        return new OpenAIProvider(config);
       case "glm":
         return new GLMProvider(config);
       case "ollama":
         return new OllamaProvider(config);
-      case "anthropic":
-        return new AnthropicProvider(config);
-      case "azure":
-        return new AzureProvider(config);
       case "custom":
         return new CustomProvider(config);
       default:
