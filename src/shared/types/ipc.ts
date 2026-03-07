@@ -95,6 +95,19 @@ export const IPC_CHANNELS = {
     DELETE_GROUP: "version:delete-group",
   },
 
+  // ============ JD 相关 ============
+  JD: {
+    LIST: "jd:list",
+    GET: "jd:get",
+    CREATE: "jd:create",
+    UPDATE: "jd:update",
+    DELETE: "jd:delete",
+    GET_STATS: "jd:get-stats",
+    MATCH_RESUME: "jd:match-resume",
+    GET_MATCHES: "jd:get-matches",
+    GET_MATCHES_BY_RESUME: "jd:get-matches-by-resume",
+  },
+
   // ============ 窗口管理相关 ============
   WINDOW: {
     SHOW_MAIN: "window:show-main",
@@ -144,13 +157,14 @@ export interface WindowStateResponse {
 
 // 导出通道类型用于类型约束
 export type IPCChannel =
-  | typeof IPC_CHANNELS.SYSTEM[keyof typeof IPC_CHANNELS.SYSTEM]
-  | typeof IPC_CHANNELS.USER[keyof typeof IPC_CHANNELS.USER]
-  | typeof IPC_CHANNELS.RESUME[keyof typeof IPC_CHANNELS.RESUME]
-  | typeof IPC_CHANNELS.FILE[keyof typeof IPC_CHANNELS.FILE]
-  | typeof IPC_CHANNELS.DATABASE[keyof typeof IPC_CHANNELS.DATABASE]
-  | typeof IPC_CHANNELS.SETTING[keyof typeof IPC_CHANNELS.SETTING]
-  | typeof IPC_CHANNELS.AI_HR_ASSISTANT[keyof typeof IPC_CHANNELS.AI_HR_ASSISTANT]
-  | typeof IPC_CHANNELS.DEDEUPE[keyof typeof IPC_CHANNELS.DEDEUPE]
-  | typeof IPC_CHANNELS.VERSION[keyof typeof IPC_CHANNELS.VERSION]
-  | typeof IPC_CHANNELS.WINDOW[keyof typeof IPC_CHANNELS.WINDOW];
+  | (typeof IPC_CHANNELS.SYSTEM)[keyof typeof IPC_CHANNELS.SYSTEM]
+  | (typeof IPC_CHANNELS.USER)[keyof typeof IPC_CHANNELS.USER]
+  | (typeof IPC_CHANNELS.RESUME)[keyof typeof IPC_CHANNELS.RESUME]
+  | (typeof IPC_CHANNELS.FILE)[keyof typeof IPC_CHANNELS.FILE]
+  | (typeof IPC_CHANNELS.DATABASE)[keyof typeof IPC_CHANNELS.DATABASE]
+  | (typeof IPC_CHANNELS.SETTING)[keyof typeof IPC_CHANNELS.SETTING]
+  | (typeof IPC_CHANNELS.AI_HR_ASSISTANT)[keyof typeof IPC_CHANNELS.AI_HR_ASSISTANT]
+  | (typeof IPC_CHANNELS.DEDEUPE)[keyof typeof IPC_CHANNELS.DEDEUPE]
+  | (typeof IPC_CHANNELS.VERSION)[keyof typeof IPC_CHANNELS.VERSION]
+  | (typeof IPC_CHANNELS.JD)[keyof typeof IPC_CHANNELS.JD]
+  | (typeof IPC_CHANNELS.WINDOW)[keyof typeof IPC_CHANNELS.WINDOW];

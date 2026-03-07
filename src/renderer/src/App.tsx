@@ -10,6 +10,7 @@ import ResumeListPage from "./pages/ResumeListPage";
 import ResumeDetailPage from "./pages/ResumeDetailPage";
 import HRAssistantPage from "./pages/HRAssistantPage";
 import VersionManagePage from "./pages/VersionManagePage";
+import JDListPage from "./pages/JDListPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -43,7 +44,10 @@ const MainWindowApp: React.FC = () => {
   const { isLoggedIn, isLoading, user, fetchUser } = useAuthStore();
   const [isInitializing, setIsInitializing] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
-  const [lastLoginInfo, setLastLoginInfo] = useState<{ user: any; timestamp: number } | null>(null);
+  const [lastLoginInfo, setLastLoginInfo] = useState<{
+    user: any;
+    timestamp: number;
+  } | null>(null);
 
   // 初始化：只在组件挂载时执行一次
   useEffect(() => {
@@ -72,7 +76,9 @@ const MainWindowApp: React.FC = () => {
         // 3. 如果有上次登录信息，尝试从服务器恢复 session
         else if (lastLogin) {
           try {
-            console.log("[MainWindowApp] 检测到上次登录信息，尝试从服务器恢复 session");
+            console.log(
+              "[MainWindowApp] 检测到上次登录信息，尝试从服务器恢复 session",
+            );
             await fetchUser();
             console.log("[MainWindowApp] Session 恢复成功，自动登录");
             // fetchUser 会自动设置 isLoggedIn = true
@@ -123,7 +129,11 @@ const MainWindowApp: React.FC = () => {
       <Route
         path="/login"
         element={
-          isLoggedIn ? <Navigate to="/home" replace /> : <LoginPage lastLoginInfo={lastLoginInfo} />
+          isLoggedIn ? (
+            <Navigate to="/home" replace />
+          ) : (
+            <LoginPage lastLoginInfo={lastLoginInfo} />
+          )
         }
       />
       <Route
@@ -134,26 +144,72 @@ const MainWindowApp: React.FC = () => {
       />
 
       {/* 需要认证的路由 */}
-      <Route path="/home" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+      <Route
+        path="/home"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<HomePage />} />
       </Route>
 
-      <Route path="/resumes" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+      <Route
+        path="/resumes"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<ResumeListPage />} />
         <Route path=":id" element={<ResumeDetailPage />} />
         <Route path=":id/hr-assistant" element={<HRAssistantPage />} />
         <Route path=":id/versions" element={<VersionManagePage />} />
       </Route>
 
-      <Route path="/upload" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+      <Route
+        path="/upload"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<ResumeUploadPage />} />
       </Route>
 
-      <Route path="/settings" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+      <Route
+        path="/jd"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<JDListPage />} />
+      </Route>
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<SettingsPage />} />
       </Route>
 
-      <Route path="/profile" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<ProfilePage />} />
       </Route>
 
@@ -161,7 +217,11 @@ const MainWindowApp: React.FC = () => {
       <Route
         path="*"
         element={
-          isLoggedIn ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />
+          isLoggedIn ? (
+            <Navigate to="/home" replace />
+          ) : (
+            <Navigate to="/login" replace />
+          )
         }
       />
     </Routes>

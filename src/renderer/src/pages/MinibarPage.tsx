@@ -18,7 +18,7 @@ interface MenuButton {
 
 const MENU_BUTTONS: MenuButton[] = [
   { icon: "🏠", label: "首页", path: "/home", tooltip: "返回首页", color: "#1890ff" },
-  { icon: "📄", label: "简历", path: "/resumes", tooltip: "我的简历", color: "#52c41a" },
+  { icon: "📄", label: "候选人", path: "/resumes", tooltip: "候选人管理", color: "#52c41a" },
   { icon: "⬆️", label: "上传", path: "/upload", tooltip: "上传简历", color: "#722ed1" },
   { icon: "⚙️", label: "设置", path: "/settings", tooltip: "系统设置", color: "#fa8c16" },
   { icon: "🚪", label: "退出", path: "logout", tooltip: "退出登录", color: "#f5222d" },

@@ -84,6 +84,12 @@ export async function invokeIPC<T = any>(
         .slice(7)
         .replace(/-([a-z])/g, (match, char) => char.toUpperCase());
       api = api[method];
+    } else if (channel.startsWith("jd:")) {
+      api = electronAPI.jd;
+      const method = channel
+        .slice(3)
+        .replace(/-([a-z])/g, (match, char) => char.toUpperCase());
+      api = api[method];
     } else if (channel.startsWith("window:")) {
       api = electronAPI.window;
       const method = channel

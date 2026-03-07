@@ -89,6 +89,33 @@ export interface InterviewQuestion {
 }
 
 /**
+ * JD-简历匹配分析请求
+ */
+export interface AnalyzeJDMatchRequest {
+  resumeContent: string;
+  resumeParsedInfo?: any;
+  jdTitle: string;
+  jdDescription: string;
+  jdRequirements: string[];
+  jdResponsibilities: string[];
+  jdSkills: string[];
+}
+
+/**
+ * JD-简历匹配分析结果
+ */
+export interface AnalyzeJDMatchResult {
+  match_score: number;
+  skill_match_score: number;
+  experience_match_score: number;
+  education_match_score: number;
+  overall_assessment: string;
+  strengths: string[];
+  weaknesses: string[];
+  recommendation: 'strong' | 'consider' | 'reject';
+}
+
+/**
  * AI 分析服务
  * 使用配置的 LLM 供应商进行简历分析和面试问题生成
  */
@@ -591,6 +618,128 @@ ${resumeContent}
     } catch (error) {
       logger.error('解析面试问题失败:', error);
       return [];
+    }
+  }
+
+  /**
+   * 分析 JD 与简历的匹配度
+   */
+  async analyzeJDMatch(request: AnalyzeJDMatchRequest): Promise<AnalyzeJDMatchResult> {
+    try {
+      const prompt = this.buildJDMatchPrompt(request);
+      const response = await this.callGLM(prompt);
+      return this.parseJDMatchResponse(response);
+    } catch (error) {
+      logger.error('JD 匹配分析失败:', error);
+      // 返回默认结果
+      return {
+        match_score: 60,
+        skill_match_score: 60,
+        experience_match_score: 60,
+        education_match_score: 60,
+        overall_assessment: 'AI 分析失败，使用默认评分。',
+        strengths: [],
+        weaknesses: [],
+        recommendation: 'consider'
+      };
+    }
+  }
+
+  /**
+   * 构建 JD 匹配提示词
+   */
+  private buildJDMatchPrompt(request: AnalyzeJDMatchRequest): string {
+    return `作为一位专业的 HR 招聘专家，请分析以下候选人的简历与职位要求的匹配度。
+
+【职位信息】
+职位名称：${request.jdTitle}
+职位描述：${request.jdDescription}
+
+必备技能要求：
+${request.jdSkills.map((s, i) => `${i + 1}. ${s}`).join('\n') || '无明确要求'}
+
+岗位职责：
+${request.jdResponsibilities.map((r, i) => `${i + 1}. ${r}`).join('\n') || '无明确说明'}
+
+任职要求：
+${request.jdRequirements.map((r, i) => `${i + 1}. ${r}`).join('\n') || '无明确要求'}
+
+【候选人简历】
+${request.resumeContent}
+
+【分析要求】
+请从以下几个维度进行专业评估：
+
+1. **整体匹配度 (match_score)**：综合评估候选人是否符合该职位，0-100分
+2. **技能匹配度 (skill_match_score)**：候选人的技能与职位要求的匹配程度，0-100分
+3. **经验匹配度 (experience_match_score)**：候选人的工作经验与岗位要求的匹配程度，0-100分
+4. **教育匹配度 (education_match_score)**：候选人的教育背景与职位要求的匹配程度，0-100分
+
+请提供：
+- **综合评估 (overall_assessment)**：用2-3句话总结候选人是否符合岗位
+- **优势 (strengths)**：候选人相对于该职位的3-5个优势（数组格式）
+- **不足 (weaknesses)**：候选人相对于该职位的2-3个不足（数组格式）
+- **推荐等级 (recommendation)**：从以下三个选项中选择：
+  - "strong"：强烈推荐，非常匹配
+  - "consider"：可以考虑，基本匹配但有不足
+  - "reject"：不推荐，不匹配
+
+【输出格式】
+请以 JSON 格式返回结果：
+{
+  "match_score": 85,
+  "skill_match_score": 80,
+  "experience_match_score": 90,
+  "education_match_score": 85,
+  "overall_assessment": "候选人整体符合岗位要求，技术栈匹配度较高，项目经验丰富。",
+  "strengths": ["熟练掌握 React 和 TypeScript", "有5年前端开发经验", "有大型项目管理经验"],
+  "weaknesses": ["缺少后端开发经验"],
+  "recommendation": "strong"
+}`;
+  }
+
+  /**
+   * 解析 JD 匹配响应
+   */
+  private parseJDMatchResponse(response: string): AnalyzeJDMatchResult {
+    try {
+      // 尝试提取 JSON
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('无法解析 AI 响应');
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      // 验证推荐等级
+      const validRecommendations = ['strong', 'consider', 'reject'];
+      const recommendation = validRecommendations.includes(parsed.recommendation)
+        ? parsed.recommendation
+        : 'consider';
+
+      return {
+        match_score: Math.min(100, Math.max(0, Math.round(parsed.match_score || 60))),
+        skill_match_score: Math.min(100, Math.max(0, Math.round(parsed.skill_match_score || 60))),
+        experience_match_score: Math.min(100, Math.max(0, Math.round(parsed.experience_match_score || 60))),
+        education_match_score: Math.min(100, Math.max(0, Math.round(parsed.education_match_score || 60))),
+        overall_assessment: parsed.overall_assessment || '评估完成',
+        strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+        weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
+        recommendation
+      };
+    } catch (error) {
+      logger.error('解析 JD 匹配响应失败:', error);
+      // 返回默认结果
+      return {
+        match_score: 60,
+        skill_match_score: 60,
+        experience_match_score: 60,
+        education_match_score: 60,
+        overall_assessment: '解析失败，使用默认评分。',
+        strengths: [],
+        weaknesses: [],
+        recommendation: 'consider'
+      };
     }
   }
 }

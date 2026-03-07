@@ -35,7 +35,7 @@ const HomePage: React.FC = () => {
             icon={<FileTextOutlined />}
             onClick={() => navigate('/resumes')}
           >
-            我的简历
+            候选人
           </Button>
         </Space>
       </Card>

@@ -346,6 +346,62 @@ export class DatabaseService {
             CREATE INDEX IF NOT EXISTS idx_ai_conversations_created_at ON ai_conversations(created_at);
           `,
         },
+        {
+          version: 6,
+          name: "add_jd_support",
+          sql: `
+            -- JD (职位描述) 表
+            CREATE TABLE IF NOT EXISTS jds (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              jd_id TEXT NOT NULL UNIQUE,
+              user_id INTEGER NOT NULL,
+              title TEXT NOT NULL,
+              department TEXT,
+              seniority TEXT,
+              location TEXT,
+              salary_min INTEGER,
+              salary_max INTEGER,
+              description TEXT NOT NULL,
+              requirements TEXT DEFAULT '[]',
+              responsibilities TEXT DEFAULT '[]',
+              skills TEXT DEFAULT '[]',
+              status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'closed')),
+              resume_count INTEGER DEFAULT 0,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+
+            -- 简历-JD 匹配表
+            CREATE TABLE IF NOT EXISTS resume_jd_matches (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              resume_id INTEGER NOT NULL,
+              jd_id TEXT NOT NULL,
+              match_score INTEGER NOT NULL CHECK (match_score >= 0 AND match_score <= 100),
+              skill_match_score INTEGER CHECK (skill_match_score >= 0 AND skill_match_score <= 100),
+              experience_match_score INTEGER CHECK (experience_match_score >= 0 AND experience_match_score <= 100),
+              education_match_score INTEGER CHECK (education_match_score >= 0 AND education_match_score <= 100),
+              overall_assessment TEXT,
+              strengths TEXT DEFAULT '[]',
+              weaknesses TEXT DEFAULT '[]',
+              recommendation TEXT CHECK (recommendation IN ('strong', 'consider', 'reject')),
+              rank INTEGER,
+              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+              FOREIGN KEY (resume_id) REFERENCES resumes(id) ON DELETE CASCADE,
+              FOREIGN KEY (jd_id) REFERENCES jds(jd_id) ON DELETE CASCADE,
+              UNIQUE(resume_id, jd_id)
+            );
+
+            -- 创建索引
+            CREATE INDEX IF NOT EXISTS idx_jds_user_id ON jds(user_id);
+            CREATE INDEX IF NOT EXISTS idx_jds_status ON jds(status);
+            CREATE INDEX IF NOT EXISTS idx_jds_created_at ON jds(created_at);
+            CREATE INDEX IF NOT EXISTS idx_resume_jd_matches_resume_id ON resume_jd_matches(resume_id);
+            CREATE INDEX IF NOT EXISTS idx_resume_jd_matches_jd_id ON resume_jd_matches(jd_id);
+            CREATE INDEX IF NOT EXISTS idx_resume_jd_matches_score ON resume_jd_matches(match_score);
+          `,
+        },
       ];
 
       // 执行未执行的迁移
@@ -1688,6 +1744,409 @@ export class DatabaseService {
       .prepare(`SELECT id FROM resume_groups WHERE id = ? AND user_id = ?`)
       .get(groupId, userId) as any;
     return result !== undefined;
+  }
+
+  // ============ JD 相关方法 ============
+
+  /**
+   * 创建 JD
+   */
+  async createJD(data: {
+    user_id: number;
+    title: string;
+    department?: string;
+    seniority?: string;
+    location?: string;
+    salary_min?: number;
+    salary_max?: number;
+    description: string;
+    requirements?: string[];
+    responsibilities?: string[];
+    skills?: string[];
+    status?: string;
+  }): Promise<any> {
+    const db = this.getDatabase();
+    const jdId = uuidv4();
+
+    const result = db
+      .prepare(
+        `
+        INSERT INTO jds (
+          jd_id, user_id, title, department, seniority, location,
+          salary_min, salary_max, description, requirements, responsibilities, skills, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      )
+      .run(
+        jdId,
+        data.user_id,
+        data.title,
+        data.department || null,
+        data.seniority || null,
+        data.location || null,
+        data.salary_min || null,
+        data.salary_max || null,
+        data.description,
+        JSON.stringify(data.requirements || []),
+        JSON.stringify(data.responsibilities || []),
+        JSON.stringify(data.skills || []),
+        data.status || "active",
+      );
+
+    return this.getJDById(jdId);
+  }
+
+  /**
+   * 根据 ID 获取 JD
+   */
+  async getJDById(jdId: string): Promise<any | null> {
+    const db = this.getDatabase();
+    const row = db.prepare("SELECT * FROM jds WHERE jd_id = ?").get(jdId) as any;
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      jd_id: row.jd_id,
+      user_id: row.user_id,
+      title: row.title,
+      department: row.department,
+      seniority: row.seniority,
+      location: row.location,
+      salary_min: row.salary_min,
+      salary_max: row.salary_max,
+      description: row.description,
+      requirements: JSON.parse(row.requirements || "[]"),
+      responsibilities: JSON.parse(row.responsibilities || "[]"),
+      skills: JSON.parse(row.skills || "[]"),
+      status: row.status,
+      resume_count: row.resume_count,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    };
+  }
+
+  /**
+   * 获取用户的 JD 列表
+   */
+  async getJDsByUserId(userId: number, filters?: any): Promise<any[]> {
+    const db = this.getDatabase();
+
+    let whereClause = "WHERE user_id = ?";
+    const params: any[] = [userId];
+
+    if (filters?.status) {
+      whereClause += " AND status = ?";
+      params.push(filters.status);
+    }
+
+    if (filters?.department) {
+      whereClause += " AND department = ?";
+      params.push(filters.department);
+    }
+
+    if (filters?.search) {
+      whereClause += " AND (title LIKE ? OR description LIKE ?)";
+      const searchPattern = `%${filters.search}%`;
+      params.push(searchPattern, searchPattern);
+    }
+
+    const rows = db
+      .prepare(
+        `
+        SELECT * FROM jds
+        ${whereClause}
+        ORDER BY created_at DESC
+      `,
+      )
+      .all(...params) as any[];
+
+    return rows.map((row) => ({
+      id: row.id,
+      jd_id: row.jd_id,
+      user_id: row.user_id,
+      title: row.title,
+      department: row.department,
+      seniority: row.seniority,
+      location: row.location,
+      salary_min: row.salary_min,
+      salary_max: row.salary_max,
+      description: row.description,
+      requirements: JSON.parse(row.requirements || "[]"),
+      responsibilities: JSON.parse(row.responsibilities || "[]"),
+      skills: JSON.parse(row.skills || "[]"),
+      status: row.status,
+      resume_count: row.resume_count,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }));
+  }
+
+  /**
+   * 更新 JD
+   */
+  async updateJD(jdId: string, data: any): Promise<any | null> {
+    const db = this.getDatabase();
+
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (data.title !== undefined) {
+      fields.push("title = ?");
+      values.push(data.title);
+    }
+    if (data.department !== undefined) {
+      fields.push("department = ?");
+      values.push(data.department);
+    }
+    if (data.seniority !== undefined) {
+      fields.push("seniority = ?");
+      values.push(data.seniority);
+    }
+    if (data.location !== undefined) {
+      fields.push("location = ?");
+      values.push(data.location);
+    }
+    if (data.salary_min !== undefined) {
+      fields.push("salary_min = ?");
+      values.push(data.salary_min);
+    }
+    if (data.salary_max !== undefined) {
+      fields.push("salary_max = ?");
+      values.push(data.salary_max);
+    }
+    if (data.description !== undefined) {
+      fields.push("description = ?");
+      values.push(data.description);
+    }
+    if (data.requirements !== undefined) {
+      fields.push("requirements = ?");
+      values.push(JSON.stringify(data.requirements));
+    }
+    if (data.responsibilities !== undefined) {
+      fields.push("responsibilities = ?");
+      values.push(JSON.stringify(data.responsibilities));
+    }
+    if (data.skills !== undefined) {
+      fields.push("skills = ?");
+      values.push(JSON.stringify(data.skills));
+    }
+    if (data.status !== undefined) {
+      fields.push("status = ?");
+      values.push(data.status);
+    }
+
+    if (fields.length === 0) {
+      return this.getJDById(jdId);
+    }
+
+    fields.push("updated_at = CURRENT_TIMESTAMP");
+    values.push(jdId);
+
+    db.prepare(`UPDATE jds SET ${fields.join(", ")} WHERE jd_id = ?`).run(...values);
+
+    // 返回更新后的数据
+    return this.getJDById(jdId);
+  }
+
+  /**
+   * 删除 JD
+   */
+  async deleteJD(jdId: string): Promise<void> {
+    const db = this.getDatabase();
+    db.prepare("DELETE FROM jds WHERE jd_id = ?").run(jdId);
+  }
+
+  /**
+   * 获取 JD 统计
+   */
+  async getJDStats(userId: number): Promise<{
+    total: number;
+    active: number;
+    inactive: number;
+    closed: number;
+  }> {
+    const db = this.getDatabase();
+
+    const total = (
+      db.prepare("SELECT COUNT(*) as count FROM jds WHERE user_id = ?").get(userId) as {
+        count: number;
+      }
+    ).count;
+
+    const active = (
+      db
+        .prepare("SELECT COUNT(*) as count FROM jds WHERE user_id = ? AND status = ?")
+        .get(userId, "active") as { count: number }
+    ).count;
+
+    const inactive = (
+      db
+        .prepare("SELECT COUNT(*) as count FROM jds WHERE user_id = ? AND status = ?")
+        .get(userId, "inactive") as { count: number }
+    ).count;
+
+    const closed = (
+      db
+        .prepare("SELECT COUNT(*) as count FROM jds WHERE user_id = ? AND status = ?")
+        .get(userId, "closed") as { count: number }
+    ).count;
+
+    return { total, active, inactive, closed };
+  }
+
+  /**
+   * 创建简历-JD 匹配记录
+   */
+  async createResumeJDMatch(data: {
+    resume_id: number;
+    jd_id: string;
+    match_score: number;
+    skill_match_score?: number;
+    experience_match_score?: number;
+    education_match_score?: number;
+    overall_assessment?: string;
+    strengths?: string[];
+    weaknesses?: string[];
+    recommendation?: string;
+    rank?: number;
+  }): Promise<any> {
+    const db = this.getDatabase();
+
+    const result = db
+      .prepare(
+        `
+        INSERT INTO resume_jd_matches (
+          resume_id, jd_id, match_score, skill_match_score, experience_match_score,
+          education_match_score, overall_assessment, strengths, weaknesses, recommendation, rank
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(resume_id, jd_id) DO UPDATE SET
+          match_score = excluded.match_score,
+          skill_match_score = excluded.skill_match_score,
+          experience_match_score = excluded.experience_match_score,
+          education_match_score = excluded.education_match_score,
+          overall_assessment = excluded.overall_assessment,
+          strengths = excluded.strengths,
+          weaknesses = excluded.weaknesses,
+          recommendation = excluded.recommendation,
+          rank = excluded.rank,
+          updated_at = CURRENT_TIMESTAMP
+      `,
+      )
+      .run(
+        data.resume_id,
+        data.jd_id,
+        data.match_score,
+        data.skill_match_score || null,
+        data.experience_match_score || null,
+        data.education_match_score || null,
+        data.overall_assessment || null,
+        JSON.stringify(data.strengths || []),
+        JSON.stringify(data.weaknesses || []),
+        data.recommendation || null,
+        data.rank || null,
+      );
+
+    // 更新 JD 的 resume_count
+    const count = (
+      db
+        .prepare("SELECT COUNT(*) as count FROM resume_jd_matches WHERE jd_id = ?")
+        .get(data.jd_id) as { count: number }
+    ).count;
+
+    db.prepare("UPDATE jds SET resume_count = ? WHERE jd_id = ?").run(count, data.jd_id);
+
+    return {
+      id: result.lastInsertRowid,
+      resume_id: data.resume_id,
+      jd_id: data.jd_id,
+      match_score: data.match_score,
+      skill_match_score: data.skill_match_score,
+      experience_match_score: data.experience_match_score,
+      education_match_score: data.education_match_score,
+      overall_assessment: data.overall_assessment,
+      strengths: data.strengths,
+      weaknesses: data.weaknesses,
+      recommendation: data.recommendation,
+      rank: data.rank,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * 获取 JD 的匹配列表
+   */
+  async getMatchesByJD(jdId: string): Promise<any[]> {
+    const db = this.getDatabase();
+
+    const rows = db
+      .prepare(
+        `
+        SELECT m.*, r.original_filename as resume_name
+        FROM resume_jd_matches m
+        JOIN resumes r ON m.resume_id = r.id
+        WHERE m.jd_id = ?
+        ORDER BY m.match_score DESC
+      `,
+      )
+      .all(jdId) as any[];
+
+    return rows.map((row) => ({
+      id: row.id,
+      resume_id: row.resume_id,
+      jd_id: row.jd_id,
+      match_score: row.match_score,
+      skill_match_score: row.skill_match_score,
+      experience_match_score: row.experience_match_score,
+      education_match_score: row.education_match_score,
+      overall_assessment: row.overall_assessment,
+      strengths: JSON.parse(row.strengths || "[]"),
+      weaknesses: JSON.parse(row.weaknesses || "[]"),
+      recommendation: row.recommendation,
+      rank: row.rank,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }));
+  }
+
+  /**
+   * 获取简历的匹配列表
+   */
+  async getMatchesByResume(resumeId: number): Promise<any[]> {
+    const db = this.getDatabase();
+
+    const rows = db
+      .prepare(
+        `
+        SELECT m.*, j.title as jd_title
+        FROM resume_jd_matches m
+        JOIN jds j ON m.jd_id = j.jd_id
+        WHERE m.resume_id = ?
+        ORDER BY m.match_score DESC
+      `,
+      )
+      .all(resumeId) as any[];
+
+    return rows.map((row) => ({
+      id: row.id,
+      resume_id: row.resume_id,
+      jd_id: row.jd_id,
+      jd_title: row.jd_title,
+      match_score: row.match_score,
+      skill_match_score: row.skill_match_score,
+      experience_match_score: row.experience_match_score,
+      education_match_score: row.education_match_score,
+      overall_assessment: row.overall_assessment,
+      strengths: JSON.parse(row.strengths || "[]"),
+      weaknesses: JSON.parse(row.weaknesses || "[]"),
+      recommendation: row.recommendation,
+      rank: row.rank,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+    }));
   }
 }
 

@@ -295,7 +295,7 @@ const ResumeDetailPage: React.FC = () => {
             title: (
               <Link to="/resumes">
                 <FileTextOutlined />
-                我的简历
+                候选人
               </Link>
             ),
           },

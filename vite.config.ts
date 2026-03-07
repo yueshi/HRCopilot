@@ -1,6 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
+import { fileURLToPath } from "url";
+
+// ES Module 中获取 __dirname 的等效方式
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = resolve(__filename, "..");
 
 export default defineConfig({
   plugins: [react()],
@@ -21,5 +26,13 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: true,
+    fs: {
+      // 允许访问上级目录
+      allow: [".."],
+    },
+  },
+  optimizeDeps: {
+    // 排除 Electron 相关依赖
+    exclude: ["electron"],
   },
 });

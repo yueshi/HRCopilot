@@ -73,7 +73,7 @@ const ResumeUploadPage: React.FC = () => {
               title: (
                 <Link to="/resumes">
                   <FileTextOutlined />
-                  我的简历
+                  候选人
                 </Link>
               ),
             },
@@ -98,7 +98,7 @@ const ResumeUploadPage: React.FC = () => {
           }
           extra={[
             <Button key="list" type="primary" onClick={handleViewList}>
-              我的简历
+              候选人
             </Button>,
             <Button key="retry" onClick={handleTryAgain} icon={<ReloadOutlined />}>
               再传一份
@@ -171,7 +171,7 @@ const ResumeUploadPage: React.FC = () => {
               title: (
                 <Link to="/resumes">
                   <FileTextOutlined />
-                  我的简历
+                  候选人
                 </Link>
               ),
             },
@@ -195,7 +195,7 @@ const ResumeUploadPage: React.FC = () => {
               重新上传
             </Button>,
             <Button key="list" onClick={handleViewList}>
-              我的简历
+              候选人
             </Button>,
           ]}
         />
@@ -230,7 +230,7 @@ const ResumeUploadPage: React.FC = () => {
             title: (
               <Link to="/resumes">
                 <FileTextOutlined />
-                我的简历
+                候选人
               </Link>
             ),
           },

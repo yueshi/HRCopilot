@@ -20,6 +20,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   LogoutOutlined,
+  ContainerOutlined,
 } from "@ant-design/icons";
 import { WindowState as WindowStateEnum } from "@/shared/types/ipc";
 import { useAuthStore } from "../store/authStore";
@@ -35,7 +36,8 @@ const Layout: React.FC = () => {
 
   const menuItems = [
     { key: "/home", icon: <HomeOutlined />, label: "首页" },
-    { key: "/resumes", icon: <FileTextOutlined />, label: "我的简历" },
+    { key: "/resumes", icon: <FileTextOutlined />, label: "候选人" },
+    { key: "/jd", icon: <ContainerOutlined />, label: "职位管理" },
     { key: "/upload", icon: <UploadOutlined />, label: "上传简历" },
     { key: "/settings", icon: <SettingOutlined />, label: "设置" },
   ];
@@ -91,17 +93,17 @@ const Layout: React.FC = () => {
   // 用户下拉菜单项
   const userMenuItems = [
     {
-      key: 'profile',
-      label: '详情',
-      onClick: () => navigate('/profile'),
+      key: "profile",
+      label: "详情",
+      onClick: () => navigate("/profile"),
     },
     {
-      key: 'divider',
-      type: 'divider' as const,
+      key: "divider",
+      type: "divider" as const,
     },
     {
-      key: 'logout',
-      label: '退出登录',
+      key: "logout",
+      label: "退出登录",
       icon: <LogoutOutlined />,
       onClick: handleLogout,
       danger: true as const,
@@ -154,35 +156,41 @@ const Layout: React.FC = () => {
                 items: userMenuItems,
               }}
               placement="bottomRight"
-              trigger={['click']}
+              trigger={["click"]}
             >
               <Space
                 style={{
-                  cursor: 'pointer',
-                  padding: '4px 12px',
-                  borderRadius: '8px',
-                  transition: 'background 0.2s',
+                  cursor: "pointer",
+                  padding: "4px 12px",
+                  borderRadius: "8px",
+                  transition: "background 0.2s",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#f5f5f5';
+                  e.currentTarget.style.background = "#f5f5f5";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.background = "transparent";
                 }}
               >
                 <Avatar
                   size={32}
                   icon={<UserOutlined />}
                   style={{
-                    backgroundColor: '#1890ff',
-                    border: '2px solid #fff',
+                    backgroundColor: "#1890ff",
+                    border: "2px solid #fff",
                   }}
                 >
-                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'bold' }}>
-                    {user.name ? user.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U')}
+                  <Text
+                    style={{ color: "#fff", fontSize: 14, fontWeight: "bold" }}
+                  >
+                    {user.name
+                      ? user.name.charAt(0).toUpperCase()
+                      : user.email
+                        ? user.email.charAt(0).toUpperCase()
+                        : "U"}
                   </Text>
                 </Avatar>
-                <Text style={{ fontSize: 14, fontWeight: 500, color: '#333' }}>
+                <Text style={{ fontSize: 14, fontWeight: 500, color: "#333" }}>
                   {user.name}
                 </Text>
               </Space>

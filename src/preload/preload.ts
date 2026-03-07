@@ -91,6 +91,19 @@ const electronAPI: Record<string, any> = {
     detect: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.DEDEUPE.DETECT, request),
   },
 
+  // JD API
+  jd: {
+    list: (filters?: any) => ipcRenderer.invoke(IPC_CHANNELS.JD.LIST, filters),
+    get: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.JD.GET, id),
+    create: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.JD.CREATE, data),
+    update: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.JD.UPDATE, data),
+    delete: (id: string) => ipcRenderer.invoke(IPC_CHANNELS.JD.DELETE, id),
+    getStats: () => ipcRenderer.invoke(IPC_CHANNELS.JD.GET_STATS),
+    matchResume: (data: any) => ipcRenderer.invoke(IPC_CHANNELS.JD.MATCH_RESUME, data),
+    getMatches: (jdId: string) => ipcRenderer.invoke(IPC_CHANNELS.JD.GET_MATCHES, jdId),
+    getMatchesByResume: (resumeId: number) => ipcRenderer.invoke(IPC_CHANNELS.JD.GET_MATCHES_BY_RESUME, resumeId),
+  },
+
   // Version API
   version: {
     createGroup: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.VERSION.CREATE_GROUP, request),

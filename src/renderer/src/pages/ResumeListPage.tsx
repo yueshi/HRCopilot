@@ -558,7 +558,7 @@ const ResumeListPage: React.FC = () => {
       )}
 
       <Title level={2} style={{ marginBottom: 24 }}>
-        <FileTextOutlined /> 我的简历
+        <FileTextOutlined /> 候选人
       </Title>
 
       {/* 统计卡片 */}
