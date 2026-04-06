@@ -11,7 +11,7 @@ export class DeduplicationHandler extends BaseHandler {
   }
 
   private registerHandlers(): void {
-    this.register(IPC_CHANNELS.DEDEUPE.DETECT, this.detectDuplicates.bind(this));
+    this.register(IPC_CHANNELS.DEDUPE.DETECT, this.detectDuplicates.bind(this));
   }
 
   /**

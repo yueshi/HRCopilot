@@ -21,6 +21,8 @@ export default defineConfig({
       "@": resolve(__dirname, "src"),
       "@/renderer": resolve(__dirname, "src/renderer"),
       "@/shared": resolve(__dirname, "src/shared"),
+      "@ant-design/icons": resolve(__dirname, "node_modules/@ant-design/icons"),
+      "@/components/Settings": resolve(__dirname, "src/renderer/src/components/Settings"),
     },
   },
   server: {

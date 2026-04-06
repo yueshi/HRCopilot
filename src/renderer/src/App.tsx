@@ -12,10 +12,12 @@ import HRAssistantPage from "./pages/HRAssistantPage";
 import VersionManagePage from "./pages/VersionManagePage";
 import JDListPage from "./pages/JDListPage";
 import LoginPage from "./pages/LoginPage";
+import CloudLoginPage from "./pages/CloudLoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import MinibarPage from "./pages/MinibarPage";
+import EmbeddedWebPage from "./pages/EmbeddedWebPage";
 import { useAuthStore } from "./store/authStore";
 import { userApi } from "./services/userIpcService";
 import { WindowType } from "@/shared/types/ipc";
@@ -137,6 +139,12 @@ const MainWindowApp: React.FC = () => {
         }
       />
       <Route
+        path="/cloud-login"
+        element={
+          isLoggedIn ? <Navigate to="/home" replace /> : <CloudLoginPage />
+        }
+      />
+      <Route
         path="/register"
         element={
           isLoggedIn ? <Navigate to="/home" replace /> : <RegisterPage />
@@ -211,6 +219,17 @@ const MainWindowApp: React.FC = () => {
         }
       >
         <Route index element={<ProfilePage />} />
+      </Route>
+
+      <Route
+        path="/embedded"
+        element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<EmbeddedWebPage />} />
       </Route>
 
       {/* 未登录且不是登录/注册页面，重定向到登录页 */}

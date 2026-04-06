@@ -97,6 +97,21 @@ export interface SettingApi {
 }
 
 /**
+ * CloudAuth API 接口 - 通过 IPC 调用
+ */
+export interface CloudAuthApi {
+  login: (username: string, password: string) => Promise<ApiResponse<any>>;
+  getToken: () => Promise<ApiResponse<string | null>>;
+  validateToken: (token: string) => Promise<ApiResponse<boolean>>;
+  logout: () => Promise<ApiResponse<void>>;
+  getUserInfo: () => Promise<ApiResponse<any | null>>;
+  getConfig: () => Promise<ApiResponse<any>>;
+  isAvailable: () => Promise<ApiResponse<boolean>>;
+  saveConfig: (config: { apiUrl: string; enabled: boolean }) => Promise<ApiResponse<void>>;
+  reloadConfig: () => Promise<ApiResponse<void>>;
+}
+
+/**
  * Electron API 接口
  * 通过 Preload 脚本暴露到渲染进程
  */
@@ -142,6 +157,7 @@ export interface ElectronAPI {
   resume: ResumeApi;
   user: UserApi;
   setting: SettingApi;
+  cloudAuth: CloudAuthApi;
 }
 
 /**

@@ -2,6 +2,7 @@ import React from "react";
 import { Tabs } from "antd";
 import ProviderList from "../components/Settings/ProviderList";
 import TaskConfigPanel from "../components/Settings/TaskConfigPanel";
+import { CloudAuthConfigPanel } from "../components/Settings/CloudAuthConfigPanel";
 
 const SettingsPage: React.FC = () => {
   return (
@@ -18,6 +19,11 @@ const SettingsPage: React.FC = () => {
             key: "tasks",
             label: "任务配置",
             children: <TaskConfigPanel />,
+          },
+          {
+            key: "cloud-auth",
+            label: "云端认证",
+            children: <CloudAuthConfigPanel />,
           },
         ]}
       />

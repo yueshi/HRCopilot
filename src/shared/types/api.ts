@@ -48,6 +48,29 @@ export type ResumeStatus = "pending" | "processing" | "completed" | "failed";
 export type QuestionDifficulty = "easy" | "medium" | "hard";
 export type QuestionType = "technical" | "behavioral" | "situational";
 
+// ============================================================================
+// CloudAuth 相关类型
+// ============================================================================
+
+export interface CloudAuthUserInfo {
+  id: number;
+  username: string;
+  name: string;
+  email?: string;
+  avatar?: string;
+  role?: string;
+}
+
+export interface CloudAuthLoginResponse {
+  user: CloudAuthUserInfo;
+  token: string;
+}
+
+export interface CloudAuthConfig {
+  apiUrl: string;
+  enabled: boolean;
+}
+
 // 去重操作类型
 export type DeduplicationAction =
   | "skip"

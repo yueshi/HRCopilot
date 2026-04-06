@@ -145,3 +145,4 @@ vite.config.ts.timestamp-*
 .spec-workflow
 
 .claude
+.DS_Store

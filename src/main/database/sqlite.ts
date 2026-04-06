@@ -204,6 +204,48 @@ export class DatabaseService {
     `);
   }
 
+  /**
+   * 检查并添加 users 表的 SSO 相关列（用于迁移版本7）
+   * SQLite 不支持 ALTER TABLE ADD COLUMN IF NOT EXISTS
+   */
+  private addSSOColumnsIfNeeded(): void {
+    if (!this.db) {
+      throw new Error("数据库未初始化");
+    }
+
+    // 获取 users 表的列信息
+    const columns = this.db.prepare("PRAGMA table_info(users)").all() as {
+      name: string;
+    }[];
+    const columnNames = new Set(columns.map((c) => c.name));
+
+    // 要添加的列定义
+    const columnsToAdd: { name: string; sql: string }[] = [
+      { name: "sso_user_id", sql: "sso_user_id TEXT" },
+      { name: "sso_token", sql: "sso_token TEXT" },
+      { name: "sso_refresh_token", sql: "sso_refresh_token TEXT" },
+      { name: "sso_token_expires_at", sql: "sso_token_expires_at INTEGER" },
+      { name: "cloud_username", sql: "cloud_username TEXT" },
+    ];
+
+    // 添加不存在的列
+    for (const column of columnsToAdd) {
+      if (!columnNames.has(column.name)) {
+        try {
+          this.db.exec(`ALTER TABLE users ADD COLUMN ${column.sql}`);
+          logger.info(`添加列: users.${column.name}`);
+        } catch (error) {
+          logger.warn(`添加列 users.${column.name} 失败:`, error);
+        }
+      }
+    }
+
+    // 创建索引（如果不存在）
+    this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_users_sso_user_id ON users(sso_user_id);
+    `);
+  }
+
   private async runMigrations(): Promise<void> {
     if (!this.db) {
       throw new Error("数据库未初始化");
@@ -402,6 +444,13 @@ export class DatabaseService {
             CREATE INDEX IF NOT EXISTS idx_resume_jd_matches_score ON resume_jd_matches(match_score);
           `,
         },
+        {
+          version: 7,
+          name: "add_sso_support",
+          sql: `
+            -- 添加 SSO 相关字段到 users 表（SQLite 不支持 ADD COLUMN IF NOT EXISTS）
+          `,
+        },
       ];
 
       // 执行未执行的迁移
@@ -415,6 +464,11 @@ export class DatabaseService {
             // 版本3的特殊处理：添加列到resumes表
             if (migration.version === 3) {
               this.addResumeColumnsIfNeeded();
+            }
+
+            // 版本7的特殊处理：添加列到users表
+            if (migration.version === 7) {
+              this.addSSOColumnsIfNeeded();
             }
 
             this.db!.prepare(

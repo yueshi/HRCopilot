@@ -86,6 +86,19 @@ const electronAPI: Record<string, any> = {
     modelsSync: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.SETTING.MODELS_SYNC, request),
   },
 
+  // CloudAuth API
+  cloudAuth: {
+    login: (username: string, password: string) => ipcRenderer.invoke("cloud-auth:login", { username, password }),
+    getToken: () => ipcRenderer.invoke("cloud-auth:get-token"),
+    validate: (token: string) => ipcRenderer.invoke("cloud-auth:validate-token", token),
+    logout: () => ipcRenderer.invoke("cloud-auth:logout"),
+    getUserInfo: () => ipcRenderer.invoke("cloud-auth:get-user-info"),
+    getConfig: () => ipcRenderer.invoke("cloud-auth:get-config"),
+    isAvailable: () => ipcRenderer.invoke("cloud-auth:is-available"),
+    saveConfig: (config: any) => ipcRenderer.invoke("setting:save-cloud-config", config),
+    reloadConfig: () => ipcRenderer.invoke("cloud-auth:reload-config"),
+  },
+
   // Deduplication
   dedupe: {
     detect: (request: any) => ipcRenderer.invoke(IPC_CHANNELS.DEDEUPE.DETECT, request),

@@ -21,7 +21,7 @@ export const IPC_CHANNELS = {
     LOGOUT: "user:logout",
   },
 
-  // ============ 简历相关 ============
+  // ============ 简历相关 = ============
   RESUME: {
     UPLOAD: "resume:upload",
     LIST: "resume:list",
@@ -82,8 +82,19 @@ export const IPC_CHANNELS = {
     GENERATE_SUGGESTION: "ai-hr-assistant:generate-suggestion",
   },
 
+  // ============ CloudAuth 认证相关 ============
+  CLOUD_AUTH: {
+    LOGIN: "cloud-auth:login",
+    GET_TOKEN: "cloud-auth:get-token",
+    VALIDATE_TOKEN: "cloud-auth:validate-token",
+    LOGOUT: "cloud-auth:logout",
+    GET_USER_INFO: "cloud-auth:get-user-info",
+    GET_CONFIG: "cloud-auth:get-config",
+    IS_AVAILABLE: "cloud-auth:is-available",
+  },
+
   // ============ 去重和版本管理相关 ============
-  DEDEUPE: {
+  DEDUPE: {
     DETECT: "dedupe:detect",
   },
   VERSION: {
@@ -120,7 +131,7 @@ export const IPC_CHANNELS = {
     GET_STATE: "window:get-state",
     LOGOUT: "window:logout",
     TRANSITION_STATE: "window:transition-state",
-  } as const,
+  },
 } as const;
 
 // 窗口类型枚举
@@ -134,7 +145,7 @@ export enum WindowState {
   /** 仅主窗口 - 应用启动或主窗口正常显示时 */
   MAIN_ONLY = "main_only",
 
-  /** 主窗口 + Minibar 窗口 - Minibar菜单被点击时 */
+  /** 主窗口 + Minibar 窗口 - Minibar 菜单被点击时 */
   MAIN_WITH_MINIBAR = "main_with_minibar",
 
   /** 仅 Minibar 窗口 - 主窗口隐藏时 */
@@ -163,8 +174,9 @@ export type IPCChannel =
   | (typeof IPC_CHANNELS.FILE)[keyof typeof IPC_CHANNELS.FILE]
   | (typeof IPC_CHANNELS.DATABASE)[keyof typeof IPC_CHANNELS.DATABASE]
   | (typeof IPC_CHANNELS.SETTING)[keyof typeof IPC_CHANNELS.SETTING]
+  | (typeof IPC_CHANNELS.CLOUD_AUTH)[keyof typeof IPC_CHANNELS.CLOUD_AUTH]
   | (typeof IPC_CHANNELS.AI_HR_ASSISTANT)[keyof typeof IPC_CHANNELS.AI_HR_ASSISTANT]
-  | (typeof IPC_CHANNELS.DEDEUPE)[keyof typeof IPC_CHANNELS.DEDEUPE]
+  | (typeof IPC_CHANNELS.DEDUPE)[keyof typeof IPC_CHANNELS.DEDUPE]
   | (typeof IPC_CHANNELS.VERSION)[keyof typeof IPC_CHANNELS.VERSION]
   | (typeof IPC_CHANNELS.JD)[keyof typeof IPC_CHANNELS.JD]
   | (typeof IPC_CHANNELS.WINDOW)[keyof typeof IPC_CHANNELS.WINDOW];

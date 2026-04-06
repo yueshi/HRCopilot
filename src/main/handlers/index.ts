@@ -8,6 +8,7 @@ import { VersionHandler } from "./versionHandler";
 import { registerWindowHandlers } from "./windowHandler";
 import { StorageHandler } from "./storageHandler";
 import { JDHandler } from "./jdHandler";
+import { CloudAuthHandler } from "./cloudAuthHandler";
 import { logger } from "../utils/logger";
 
 export function registerAllHandlers(): void {
@@ -43,6 +44,9 @@ export function registerAllHandlers(): void {
 
     new JDHandler();
     logger.info("JD IPC 处理器已注册");
+
+    new CloudAuthHandler();
+    logger.info("云端认证 IPC 处理器已注册");
 
     logger.info("所有 IPC 处理器注册完成");
   } catch (error) {

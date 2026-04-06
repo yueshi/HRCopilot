@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { userApi } from "../services/userIpcService";
+import { cloudAuthApi } from "../services/cloudAuthIpcService";
 import type { UserData, UserStatsData } from "../../../shared/types";
 
 export interface User {
@@ -19,6 +20,7 @@ interface AuthState {
 
 interface AuthActions {
   login: (email: string, password: string) => Promise<void>;
+  cloudAuthLogin: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
   updateProfile: (updates: Partial<User>) => Promise<void>;
@@ -78,6 +80,63 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
     }
   },
 
+  cloudAuthLogin: async (username, password) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      console.log("authStore.cloudAuthLogin: 调用 cloudAuthApi.login");
+      const cloudAuthResponse = await cloudAuthApi.login(username, password);
+      console.log("authStore.cloudAuthLogin: 响应", cloudAuthResponse);
+
+      const userData = cloudAuthResponse.data?.user;
+      if (userData) {
+        const user: User = {
+          id: 0, // 本地用户 ID 需要从后端获取
+          email: userData.email || userData.username,
+          name: userData.name,
+          userType: "free", // 云端用户类型暂时设为 free
+        };
+
+        set({ user, isLoggedIn: true, isLoading: false });
+
+        // 获取完整的用户信息（包括本地 ID）
+        userApi
+          .getProfile()
+          .then((profile) => {
+            set({
+              user: {
+                id: profile.id,
+                email: profile.email,
+                name: profile.name,
+                userType: profile.userType || "free",
+              },
+            });
+          })
+          .catch(() => {});
+
+        userApi
+          .getStats()
+          .then((stats) => {
+            set({ stats });
+          })
+          .catch(() => {});
+      } else {
+        console.error(
+          "authStore.cloudAuthLogin: 响应中没有 user 字段",
+          cloudAuthResponse,
+        );
+        set({ isLoading: false, error: "登录失败：响应格式错误" });
+        throw new Error("登录失败：响应格式错误");
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error("authStore.cloudAuthLogin: 错误", error);
+      set({ isLoading: false, error: errorMessage });
+      throw error;
+    }
+  },
+
   logout: async () => {
     try {
       await userApi.logout();
@@ -98,7 +157,7 @@ export const useAuthStore = create<AuthState & AuthActions>((set, get) => ({
         name,
       });
 
-      if (registerResponse && registerResponse.userId) {
+      if (registerResponse && registerResponse) {
         await get().login(email, password);
       } else {
         set({ isLoading: false });

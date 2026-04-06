@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layout as AntLayout,
   Menu,
@@ -21,9 +21,11 @@ import {
   MenuUnfoldOutlined,
   LogoutOutlined,
   ContainerOutlined,
+  CloudOutlined,
 } from "@ant-design/icons";
 import { WindowState as WindowStateEnum } from "@/shared/types/ipc";
 import { useAuthStore } from "../store/authStore";
+import { cloudAuthApi } from "../services";
 
 const { Header, Content, Sider } = AntLayout;
 const { Title, Text } = Typography;
@@ -32,12 +34,29 @@ const Layout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(true);
+  const [cloudAuthAvailable, setCloudAuthAvailable] = useState(false);
   const { isLoggedIn, user, logout } = useAuthStore();
 
+  // 检查云端认证是否可用
+  useEffect(() => {
+    cloudAuthApi
+      .isAvailable()
+      .then((response) => {
+        setCloudAuthAvailable(response.data || false);
+      })
+      .catch(() => {
+        setCloudAuthAvailable(false);
+      });
+  }, []);
+
+  // 动态构建菜单项
   const menuItems = [
     { key: "/home", icon: <HomeOutlined />, label: "首页" },
     { key: "/resumes", icon: <FileTextOutlined />, label: "候选人" },
     { key: "/jd", icon: <ContainerOutlined />, label: "职位管理" },
+    ...(cloudAuthAvailable
+      ? [{ key: "/embedded", icon: <CloudOutlined />, label: "OpenClaw" }]
+      : []),
     { key: "/upload", icon: <UploadOutlined />, label: "上传简历" },
     { key: "/settings", icon: <SettingOutlined />, label: "设置" },
   ];

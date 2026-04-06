@@ -2,6 +2,7 @@
 export { invokeIPC, invokeIPCFull, isElectronEnv } from './ipcApi';
 export { resumeApi } from './resumeIpcService';
 export { userApi } from './userIpcService';
+export { cloudAuthApi } from './cloudAuthIpcService';
 export { dedupeApi } from './deduplicationIpcService';
 export { versionApi } from './versionIpcService';
 export { aiHrAssistantApi } from './aiHrAssistantIpcService';

@@ -8,11 +8,12 @@ import {
   message,
   Space,
   Alert,
+  Divider,
 } from "antd";
-import { LockOutlined, MailOutlined, ClockCircleOutlined } from "@ant-design/icons";
+import { LockOutlined, MailOutlined, ClockCircleOutlined, CloudOutlined } from "@ant-design/icons";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { userApi } from "../services/userIpcService";
+import { userApi } from "../services";
 import { WindowState } from "@/shared/types/ipc";
 import type { UserData } from "../../../shared/types";
 import "../styles/AuthPages.css";
@@ -31,8 +32,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ lastLoginInfo: propLastLoginInfo 
   const { login, error, clearError, isLoading } = useAuthStore();
   const [form] = Form.useForm();
   const [lastLoginUser, setLastLoginUser] = useState<{ user: UserData; timestamp: number } | null>(propLastLoginInfo || null);
+  const [cloudAuthAvailable, setCloudAuthAvailable] = useState(false);
 
   useEffect(() => {
+    // 检查云端认证是否可用
+    window.electron.ipcRenderer
+      .invoke("cloud-auth:is-available")
+      .then((response: any) => {
+        setCloudAuthAvailable(response.data || false);
+      })
+      .catch(() => {
+        setCloudAuthAvailable(false);
+      });
+
+    // 检查上次登录信息
     // 如果从 props 传入，直接使用；否则从 localStorage 读取
     if (propLastLoginInfo) {
       setLastLoginUser(propLastLoginInfo);
@@ -184,6 +197,20 @@ const LoginPage: React.FC<LoginPageProps> = ({ lastLoginInfo: propLastLoginInfo 
         <div className="auth-link-text">
           还没有账号？ <Link to="/register" className="auth-link">立即注册</Link>
         </div>
+
+        {cloudAuthAvailable && (
+          <>
+            <Divider style={{ margin: '16px 0' }}>或</Divider>
+            <Button
+              icon={<CloudOutlined />}
+              onClick={() => navigate('/cloud-login')}
+              block
+              size="large"
+            >
+              云端登录
+            </Button>
+          </>
+        )}
       </Card>
     </div>
   );
